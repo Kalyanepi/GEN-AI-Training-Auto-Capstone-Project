@@ -1,0 +1,44 @@
+[
+  {
+    "label": "Unfiltered baseline",
+    "query": "Is cosmetic surgery covered?",
+    "filter": "None",
+    "latency_ms": 440.0,
+    "results_returned": 3
+  },
+  {
+    "label": "Health-only filter",
+    "query": "Is cosmetic surgery covered?",
+    "filter": "{'policy_type': 'health'}",
+    "latency_ms": 198.2,
+    "results_returned": 3
+  },
+  {
+    "label": "Motor claims procedure",
+    "query": "How do I register a vehicle damage claim?",
+    "filter": "{'policy_type': 'motor', 'section': 'claims_procedure'}",
+    "latency_ms": 138.9,
+    "results_returned": 1
+  },
+  {
+    "label": "Life riders only",
+    "query": "What extra coverage can I add to my life policy?",
+    "filter": "{'policy_type': 'life', 'section': 'riders'}",
+    "latency_ms": 165.5,
+    "results_returned": 3
+  },
+  {
+    "label": "Motor add-ons monsoon",
+    "query": "What add-ons protect my car in monsoon floods?",
+    "filter": "{'policy_type': 'motor', 'section': 'add_ons'}",
+    "latency_ms": 130.6,
+    "results_returned": 3
+  },
+  {
+    "label": "Health exclusion dual-filter",
+    "query": "What is not covered under health insurance?",
+    "filter": "{'policy_type': 'health', 'claim_type': 'exclusion'}",
+    "latency_ms": 174.1,
+    "results_returned": 2
+  }
+]

@@ -1,0 +1,34 @@
+[
+  {
+    "query": "IDV insured declared value depreciation",
+    "expected": "M009",
+    "bm25_top1": "M009",
+    "faiss_top1": "M009",
+    "hybrid_top1": "M009",
+    "latency_ms": 644.4
+  },
+  {
+    "query": "My car got flooded in the rains am I covered",
+    "expected": "M006",
+    "bm25_top1": "H004",
+    "faiss_top1": "M006",
+    "hybrid_top1": "M006",
+    "latency_ms": 167.1
+  },
+  {
+    "query": "NCB for accident free car policy",
+    "expected": "M003",
+    "bm25_top1": "M010",
+    "faiss_top1": "M003",
+    "hybrid_top1": "M010",
+    "latency_ms": 264.4
+  },
+  {
+    "query": "what happens to my family if I pass away",
+    "expected": "L001",
+    "bm25_top1": "H008",
+    "faiss_top1": "L003",
+    "hybrid_top1": "H008",
+    "latency_ms": 128.9
+  }
+]

@@ -1,0 +1,115 @@
+{
+  "run_timestamp": "2026-05-08T09:23:05.815300+00:00",
+  "results": [
+    {
+      "label": "RELEVANT",
+      "query": "How many sick leave days do employees get?",
+      "retrieved_chunks": [
+        {
+          "rank": 1,
+          "score": 0.6633198261260986,
+          "content": "LEAVE POLICY — Section 7: Sick Leave\nEmployees are entitled to 12 days sick leave per calendar year.\nMedical certificate required for absences exceeding 3 consecutive days.\nUnused sick leave cannot be carried forward to the next year.\nPOLICY"
+        },
+        {
+          "rank": 2,
+          "score": 1.4772754907608032,
+          "content": "Personal devices require MDM enrollment before accessing company email.\nEXPENSE REIMBURSEMENT POLICY\nTravel expenses above $500 require prior manager approval.\nMeal allowance is $75 per day during business travel.\nReceipts must be submitted within 30 days via the expense portal.\nHANDBOOK"
+        },
+        {
+          "rank": 3,
+          "score": 1.4902620315551758,
+          "content": "HEALTH INSURANCE POLICY — Section 3: Claims\nAll claims must be submitted within 90 days of service date.\nPre-authorization is required for surgeries above $5,000.\nMental health visits are covered up to 20 sessions per year.\nEmergency room visits require notification within 48 hours."
+        }
+      ],
+      "llm_answer": "Employees are entitled to 12 days of sick leave per calendar year."
+    },
+    {
+      "label": "OUT-OF-DOMAIN",
+      "query": "What is the capital of France?",
+      "retrieved_chunks": [
+        {
+          "rank": 1,
+          "score": 1.8480255603790283,
+          "content": "EMPLOYEE HANDBOOK — IT Security Policy\nPasswords must be changed every 90 days and contain 12+ characters.\nVPN is mandatory when accessing company resources remotely.\nReporting a security incident: email security@company.com within 1 hour."
+        },
+        {
+          "rank": 2,
+          "score": 1.8937206268310547,
+          "content": "Personal devices require MDM enrollment before accessing company email.\nEXPENSE REIMBURSEMENT POLICY\nTravel expenses above $500 require prior manager approval.\nMeal allowance is $75 per day during business travel.\nReceipts must be submitted within 30 days via the expense portal.\nHANDBOOK"
+        },
+        {
+          "rank": 3,
+          "score": 1.9850395917892456,
+          "content": "HEALTH INSURANCE POLICY — Section 3: Claims\nAll claims must be submitted within 90 days of service date.\nPre-authorization is required for surgeries above $5,000.\nMental health visits are covered up to 20 sessions per year.\nEmergency room visits require notification within 48 hours."
+        }
+      ],
+      "llm_answer": "The capital of France is Paris."
+    },
+    {
+      "label": "VOCABULARY MISMATCH",
+      "query": "How many annual leave days?",
+      "retrieved_chunks": [
+        {
+          "rank": 1,
+          "score": 0.8657435774803162,
+          "content": "LEAVE POLICY — Section 7: Sick Leave\nEmployees are entitled to 12 days sick leave per calendar year.\nMedical certificate required for absences exceeding 3 consecutive days.\nUnused sick leave cannot be carried forward to the next year.\nPOLICY"
+        },
+        {
+          "rank": 2,
+          "score": 1.3944926261901855,
+          "content": "Personal devices require MDM enrollment before accessing company email.\nEXPENSE REIMBURSEMENT POLICY\nTravel expenses above $500 require prior manager approval.\nMeal allowance is $75 per day during business travel.\nReceipts must be submitted within 30 days via the expense portal.\nHANDBOOK"
+        },
+        {
+          "rank": 3,
+          "score": 1.4647300243377686,
+          "content": "EMPLOYEE HANDBOOK — IT Security Policy\nPasswords must be changed every 90 days and contain 12+ characters.\nVPN is mandatory when accessing company resources remotely.\nReporting a security incident: email security@company.com within 1 hour."
+        }
+      ],
+      "llm_answer": "The provided context does not specify the number of annual leave days. It only details the sick leave policy, which allows for 12 days of sick leave per calendar year. For information on annual leave days, you may need to refer to another section of the employee handbook or company policy."
+    },
+    {
+      "label": "MULTI-TOPIC",
+      "query": "Tell me about leave policies and expense policies",
+      "retrieved_chunks": [
+        {
+          "rank": 1,
+          "score": 0.9749942421913147,
+          "content": "Personal devices require MDM enrollment before accessing company email.\nEXPENSE REIMBURSEMENT POLICY\nTravel expenses above $500 require prior manager approval.\nMeal allowance is $75 per day during business travel.\nReceipts must be submitted within 30 days via the expense portal.\nHANDBOOK"
+        },
+        {
+          "rank": 2,
+          "score": 1.0353162288665771,
+          "content": "LEAVE POLICY — Section 7: Sick Leave\nEmployees are entitled to 12 days sick leave per calendar year.\nMedical certificate required for absences exceeding 3 consecutive days.\nUnused sick leave cannot be carried forward to the next year.\nPOLICY"
+        },
+        {
+          "rank": 3,
+          "score": 1.3232463598251343,
+          "content": "EMPLOYEE HANDBOOK — IT Security Policy\nPasswords must be changed every 90 days and contain 12+ characters.\nVPN is mandatory when accessing company resources remotely.\nReporting a security incident: email security@company.com within 1 hour."
+        }
+      ],
+      "llm_answer": "**Leave Policies:**\n\n1. **Sick Leave**: Employees are entitled to 12 days of sick leave per calendar year. \n2. **Medical Certificate**: A medical certificate is required for any absences that exceed 3 consecutive days.\n3. **Unused Sick Leave**: Any unused sick leave cannot be carried forward to the next calendar year.\n\n---\n\n**Expense Policies:**\n\n1. **Travel Expenses**: Any travel expenses exceeding $500 require prior approval from a manager.\n2. **Meal Allowance**: Employees are entitled to a meal allowance of $75 per day while traveling for business.\n3. **Receipt Submission**: Receipts for expenses must be submitted within 30 days through the expense portal. \n\nThese policies ensure that employees are aware of their entitlements and the procedures they must follow regarding leave and expense reimbursements."
+    },
+    {
+      "label": "AMBIGUOUS",
+      "query": "What happens if I miss the 90 day deadline?",
+      "retrieved_chunks": [
+        {
+          "rank": 1,
+          "score": 1.3589143753051758,
+          "content": "HEALTH INSURANCE POLICY — Section 3: Claims\nAll claims must be submitted within 90 days of service date.\nPre-authorization is required for surgeries above $5,000.\nMental health visits are covered up to 20 sessions per year.\nEmergency room visits require notification within 48 hours."
+        },
+        {
+          "rank": 2,
+          "score": 1.5544230937957764,
+          "content": "EMPLOYEE HANDBOOK — IT Security Policy\nPasswords must be changed every 90 days and contain 12+ characters.\nVPN is mandatory when accessing company resources remotely.\nReporting a security incident: email security@company.com within 1 hour."
+        },
+        {
+          "rank": 3,
+          "score": 1.5897407531738281,
+          "content": "LEAVE POLICY — Section 7: Sick Leave\nEmployees are entitled to 12 days sick leave per calendar year.\nMedical certificate required for absences exceeding 3 consecutive days.\nUnused sick leave cannot be carried forward to the next year.\nPOLICY"
+        }
+      ],
+      "llm_answer": "If you miss the 90-day deadline for submitting a claim, your claim may be denied, and you will not be able to receive reimbursement for the services rendered. It is important to submit all claims within the specified timeframe to ensure coverage."
+    }
+  ]
+}

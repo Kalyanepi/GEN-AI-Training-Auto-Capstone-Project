@@ -1,0 +1,88 @@
+{
+  "results": [
+    {
+      "query_id": "Q1",
+      "question": "What is the waiting period for pre-existing diseases?",
+      "expected": "36 months",
+      "results_by_size": {
+        "256": {
+          "answer": "The waiting period for pre-existing diseases is 36 months from the policy inception date.",
+          "context_tokens": 207,
+          "latency_s": 4.5,
+          "found": true,
+          "score": 1
+        },
+        "512": {
+          "answer": "The waiting period for pre-existing diseases is 36 months from the policy inception date.",
+          "context_tokens": 207,
+          "latency_s": 0.62,
+          "found": true,
+          "score": 1
+        }
+      }
+    },
+    {
+      "query_id": "Q2",
+      "question": "What is the maternity benefit amount for normal delivery?",
+      "expected": "Rs 50,000",
+      "results_by_size": {
+        "256": {
+          "answer": "NOT FOUND",
+          "context_tokens": 207,
+          "latency_s": 0.38,
+          "found": false,
+          "score": 0
+        },
+        "512": {
+          "answer": "NOT FOUND",
+          "context_tokens": 207,
+          "latency_s": 0.43,
+          "found": false,
+          "score": 0
+        }
+      }
+    },
+    {
+      "query_id": "Q3",
+      "question": "How many days after discharge must I submit reimbursement documents?",
+      "expected": "30 days",
+      "results_by_size": {
+        "256": {
+          "answer": "You must submit reimbursement documents within 30 days of discharge.",
+          "context_tokens": 207,
+          "latency_s": 0.54,
+          "found": true,
+          "score": 1
+        },
+        "512": {
+          "answer": "You must submit reimbursement documents within 30 days of discharge.",
+          "context_tokens": 207,
+          "latency_s": 0.74,
+          "found": true,
+          "score": 1
+        }
+      }
+    },
+    {
+      "query_id": "Q4",
+      "question": "What no-claim bonus does the policy offer and what is the maximum NCB?",
+      "expected": "5% per year, max 50%",
+      "results_by_size": {
+        "256": {
+          "answer": "NOT FOUND",
+          "context_tokens": 207,
+          "latency_s": 0.54,
+          "found": false,
+          "score": 0
+        },
+        "512": {
+          "answer": "NOT FOUND",
+          "context_tokens": 207,
+          "latency_s": 0.44,
+          "found": false,
+          "score": 0
+        }
+      }
+    }
+  ]
+}

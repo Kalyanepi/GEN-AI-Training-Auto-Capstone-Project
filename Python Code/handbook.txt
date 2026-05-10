@@ -1,0 +1,10 @@
+EMPLOYEE HANDBOOK — IT Security Policy
+Passwords must be changed every 90 days and contain 12+ characters.
+VPN is mandatory when accessing company resources remotely.
+Reporting a security incident: email security@company.com within 1 hour.
+Personal devices require MDM enrollment before accessing company email.
+EXPENSE REIMBURSEMENT POLICY
+Travel expenses above $500 require prior manager approval.
+Meal allowance is $75 per day during business travel.
+Receipts must be submitted within 30 days via the expense portal.
+HANDBOOK
