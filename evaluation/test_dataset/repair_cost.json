@@ -1,0 +1,56 @@
+[
+  {
+    "id": "rep-01",
+    "question": "How much does front bumper replacement cost on a Mid-size Sedan?",
+    "policy_tier": "premium",
+    "vehicle_category": "Mid-size Sedan",
+    "coverage_type": "collision",
+    "expected_keywords": ["bumper", "$"],
+    "expected_intent": "REPAIR_ESTIMATE"
+  },
+  {
+    "id": "rep-02",
+    "question": "What's the cost when both airbags deploy in a Luxury SUV?",
+    "policy_tier": "elite",
+    "vehicle_category": "Luxury SUV",
+    "coverage_type": "collision",
+    "expected_keywords": ["airbag", "OEM", "$"],
+    "expected_intent": "REPAIR_ESTIMATE"
+  },
+  {
+    "id": "rep-03",
+    "question": "Windshield replacement cost on a Compact SUV?",
+    "policy_tier": "premium",
+    "vehicle_category": "Compact SUV/Crossover",
+    "coverage_type": "comprehensive",
+    "expected_keywords": ["windshield", "$"],
+    "expected_intent": "REPAIR_ESTIMATE"
+  },
+  {
+    "id": "rep-04",
+    "question": "Full hail damage on an Economy compact car?",
+    "policy_tier": "standard",
+    "vehicle_category": "Economy/Compact",
+    "coverage_type": "comprehensive",
+    "expected_keywords": ["hail", "PDR", "$"],
+    "expected_intent": "REPAIR_ESTIMATE"
+  },
+  {
+    "id": "rep-05",
+    "question": "Engine damage cost for a Full-size SUV/Truck?",
+    "policy_tier": "premium",
+    "vehicle_category": "Full-size SUV/Truck",
+    "coverage_type": "collision",
+    "expected_keywords": ["engine", "$"],
+    "expected_intent": "REPAIR_ESTIMATE"
+  },
+  {
+    "id": "rep-06",
+    "question": "Major frame straightening on a Mid-size Sedan?",
+    "policy_tier": "premium",
+    "vehicle_category": "Mid-size Sedan",
+    "coverage_type": "collision",
+    "expected_keywords": ["frame", "structural", "$"],
+    "expected_intent": "REPAIR_ESTIMATE"
+  }
+]

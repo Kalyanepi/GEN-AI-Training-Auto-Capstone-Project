@@ -1,0 +1,30 @@
+[
+  {
+    "id": "ra-01",
+    "question": "What's my rental car limit on Premium Guard?",
+    "policy_tier": "premium",
+    "expected_keywords": ["$50", "30 days", "rental"],
+    "expected_intent": "RENTAL_LOOKUP"
+  },
+  {
+    "id": "ra-02",
+    "question": "How many lockout services do I get on Comprehensive Elite?",
+    "policy_tier": "elite",
+    "expected_keywords": ["lockout", "unlimited"],
+    "expected_intent": "ROADSIDE"
+  },
+  {
+    "id": "ra-03",
+    "question": "How many tow calls per term do I have on Standard Shield?",
+    "policy_tier": "standard",
+    "expected_keywords": ["2", "tow", "$75"],
+    "expected_intent": "ROADSIDE"
+  },
+  {
+    "id": "ra-04",
+    "question": "What's the trip interruption benefit on Comprehensive Elite?",
+    "policy_tier": "elite",
+    "expected_keywords": ["$600", "trip interruption"],
+    "expected_intent": "ROADSIDE"
+  }
+]

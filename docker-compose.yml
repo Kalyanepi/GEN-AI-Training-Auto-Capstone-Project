@@ -1,0 +1,46 @@
+version: '3.9'
+
+# WHY: persisted volumes so the FAISS index survives container restarts —
+# rebuilding ~260 embeddings on every deploy is wasteful and slow.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: roadguard-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    env_file: .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - roadguard-net
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    container_name: roadguard-ui
+    ports:
+      - "8501:8501"
+    environment:
+      - API_BASE_URL=http://api:8000
+    env_file: .env
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - roadguard-net
+
+networks:
+  roadguard-net:
+    driver: bridge

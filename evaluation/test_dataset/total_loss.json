@@ -1,0 +1,62 @@
+[
+  {
+    "id": "tl-01",
+    "question": "My car was in an accident in Illinois. ACV is $8,000 and the repair estimate is $6,500. Will it be a total loss?",
+    "policy_tier": "premium",
+    "state_code": "IL",
+    "acv": 8000,
+    "repair_cost": 6500,
+    "expected_is_total_loss": true,
+    "expected_threshold_pct": 75,
+    "expected_keywords": ["total loss", "75%", "81"],
+    "expected_intent": "TOTAL_LOSS"
+  },
+  {
+    "id": "tl-02",
+    "question": "Texas — ACV $12,000 and repair estimate $11,000. Total loss?",
+    "policy_tier": "premium",
+    "state_code": "TX",
+    "acv": 12000,
+    "repair_cost": 11000,
+    "expected_is_total_loss": false,
+    "expected_threshold_pct": 100,
+    "expected_keywords": ["not", "total loss", "100%", "actual"],
+    "expected_intent": "TOTAL_LOSS"
+  },
+  {
+    "id": "tl-03",
+    "question": "Florida — ACV $5,000 and repair estimate $3,800. Total loss?",
+    "policy_tier": "standard",
+    "state_code": "FL",
+    "acv": 5000,
+    "repair_cost": 3800,
+    "expected_is_total_loss": false,
+    "expected_threshold_pct": 80,
+    "expected_keywords": ["not", "76", "80%"],
+    "expected_intent": "TOTAL_LOSS"
+  },
+  {
+    "id": "tl-04",
+    "question": "Pennsylvania — ACV $10,000 and repair estimate $10,500. Total loss?",
+    "policy_tier": "premium",
+    "state_code": "PA",
+    "acv": 10000,
+    "repair_cost": 10500,
+    "expected_is_total_loss": false,
+    "expected_threshold_pct": 110,
+    "expected_keywords": ["not", "110%", "combined"],
+    "expected_intent": "TOTAL_LOSS"
+  },
+  {
+    "id": "tl-05",
+    "question": "California — ACV $15,000 and repair estimate $12,000. Total loss?",
+    "policy_tier": "elite",
+    "state_code": "CA",
+    "acv": 15000,
+    "repair_cost": 12000,
+    "expected_is_total_loss": true,
+    "expected_threshold_pct": 75,
+    "expected_keywords": ["total loss", "80", "75%"],
+    "expected_intent": "TOTAL_LOSS"
+  }
+]

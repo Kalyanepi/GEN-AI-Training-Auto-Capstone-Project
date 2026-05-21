@@ -1,0 +1,37 @@
+[
+  {
+    "id": "fnol-01",
+    "question": "I just had a fender-bender. How do I file a claim?",
+    "policy_tier": "premium",
+    "expected_keywords": ["file", "claim", "FNOL", "step"],
+    "expected_intent": "FNOL_GUIDANCE"
+  },
+  {
+    "id": "fnol-02",
+    "question": "I was hit and run. What do I do and what's the deadline?",
+    "policy_tier": "premium",
+    "expected_keywords": ["hit and run", "72", "uninsured", "police"],
+    "expected_intent": "FNOL_GUIDANCE"
+  },
+  {
+    "id": "fnol-03",
+    "question": "My car was stolen overnight. What's the process?",
+    "policy_tier": "elite",
+    "expected_keywords": ["theft", "police report", "24"],
+    "expected_intent": "FNOL_GUIDANCE"
+  },
+  {
+    "id": "fnol-04",
+    "question": "Hail damaged my car. What do I need to file?",
+    "policy_tier": "premium",
+    "expected_keywords": ["hail", "comprehensive", "photos"],
+    "expected_intent": "FNOL_GUIDANCE"
+  },
+  {
+    "id": "fnol-05",
+    "question": "I damaged someone else's property in a parking lot. How do I report it?",
+    "policy_tier": "standard",
+    "expected_keywords": ["liability", "third party", "report"],
+    "expected_intent": "FNOL_GUIDANCE"
+  }
+]

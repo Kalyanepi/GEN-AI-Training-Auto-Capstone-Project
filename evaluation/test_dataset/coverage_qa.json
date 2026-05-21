@@ -1,0 +1,72 @@
+[
+  {
+    "id": "cov-01",
+    "question": "What's the difference between collision and comprehensive coverage?",
+    "policy_tier": "premium",
+    "expected_keywords": ["collision", "comprehensive", "impact", "theft"],
+    "expected_intent": "COVERAGE_QA"
+  },
+  {
+    "id": "cov-02",
+    "question": "Is wear and tear covered under my policy?",
+    "policy_tier": "premium",
+    "expected_keywords": ["wear", "exclusion", "not covered"],
+    "expected_intent": "COVERAGE_QA"
+  },
+  {
+    "id": "cov-03",
+    "question": "Do I have GAP coverage on my Standard Shield plan?",
+    "policy_tier": "standard",
+    "expected_keywords": ["gap", "add-on", "$8"],
+    "expected_intent": "COVERAGE_QA"
+  },
+  {
+    "id": "cov-04",
+    "question": "Is GAP included in Premium Guard?",
+    "policy_tier": "premium",
+    "expected_keywords": ["gap", "included", "60 months"],
+    "expected_intent": "COVERAGE_QA"
+  },
+  {
+    "id": "cov-05",
+    "question": "What is my MedPay limit on Comprehensive Elite?",
+    "policy_tier": "elite",
+    "expected_keywords": ["medpay", "$25,000", "25000"],
+    "expected_intent": "COVERAGE_QA"
+  },
+  {
+    "id": "cov-06",
+    "question": "Can I stack UM coverage across multiple vehicles?",
+    "policy_tier": "premium",
+    "expected_keywords": ["stack", "uninsured", "um"],
+    "expected_intent": "UM_UIM"
+  },
+  {
+    "id": "cov-07",
+    "question": "What are the bodily injury liability limits on Standard Shield?",
+    "policy_tier": "standard",
+    "expected_keywords": ["50", "100", "bodily injury", "liability"],
+    "expected_intent": "COVERAGE_QA"
+  },
+  {
+    "id": "cov-08",
+    "question": "Is the glass deductible waived under Premium Guard?",
+    "policy_tier": "premium",
+    "expected_keywords": ["glass", "waiver", "yes"],
+    "expected_intent": "COVERAGE_QA"
+  },
+  {
+    "id": "cov-09",
+    "question": "Are intentional acts covered?",
+    "policy_tier": "premium",
+    "expected_keywords": ["intentional", "exclusion", "not covered"],
+    "expected_intent": "COVERAGE_QA"
+  },
+  {
+    "id": "cov-10",
+    "question": "What is New Car Replacement and which tiers include it?",
+    "policy_tier": "elite",
+    "expected_keywords": ["new car replacement", "elite", "2 years"],
+    "expected_intent": "COVERAGE_QA"
+  }
+]

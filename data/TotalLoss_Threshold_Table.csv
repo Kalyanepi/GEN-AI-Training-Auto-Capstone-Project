@@ -1,0 +1,91 @@
+state_code,state_name,total_loss_threshold_pct,vehicle_age_min_yrs,vehicle_age_max_yrs,vehicle_age_category,threshold_rule,salvage_value_typical_pct_acv,roadguard_settlement_basis,notes
+IL,Illinois,75%,0,1,New (0-1 year),75,34,ACV minus deductible,
+IL,Illinois,75%,2,3,Nearly New (2-3 years),75,30,ACV minus deductible,
+IL,Illinois,75%,4,6,Mid-age (4-6 years),75,29,ACV minus deductible,
+IL,Illinois,75%,7,10,Older (7-10 years),75,23,ACV minus deductible,
+IL,Illinois,75%,11,15,High Age (11-15 years),75,16,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+IL,Illinois,75%,16,99,Classic/Aged (16+ years),75,6,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+CA,California,75%,0,1,New (0-1 year),75,33,ACV minus deductible,
+CA,California,75%,2,3,Nearly New (2-3 years),75,33,ACV minus deductible,
+CA,California,75%,4,6,Mid-age (4-6 years),75,25,ACV minus deductible,
+CA,California,75%,7,10,Older (7-10 years),75,23,ACV minus deductible,
+CA,California,75%,11,15,High Age (11-15 years),75,11,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+CA,California,75%,16,99,Classic/Aged (16+ years),75,6,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+TX,Texas,100%,0,1,New (0-1 year),100,33,ACV minus deductible,State uses actual total loss rule; repair + storage must equal or exceed ACV before total loss declared
+TX,Texas,100%,2,3,Nearly New (2-3 years),100,33,ACV minus deductible,State uses actual total loss rule; repair + storage must equal or exceed ACV before total loss declared
+TX,Texas,100%,4,6,Mid-age (4-6 years),100,29,ACV minus deductible,State uses actual total loss rule; repair + storage must equal or exceed ACV before total loss declared
+TX,Texas,100%,7,10,Older (7-10 years),100,19,ACV minus deductible,State uses actual total loss rule; repair + storage must equal or exceed ACV before total loss declared
+TX,Texas,100%,11,15,High Age (11-15 years),100,11,ACV minus deductible (depreciation schedule applied),State uses actual total loss rule; repair + storage must equal or exceed ACV before total loss declared
+TX,Texas,100%,16,99,Classic/Aged (16+ years),100,5,ACV minus deductible (depreciation schedule applied),State uses actual total loss rule; repair + storage must equal or exceed ACV before total loss declared
+FL,Florida,80%,0,1,New (0-1 year),80,36,ACV minus deductible,
+FL,Florida,80%,2,3,Nearly New (2-3 years),80,34,ACV minus deductible,
+FL,Florida,80%,4,6,Mid-age (4-6 years),80,25,ACV minus deductible,
+FL,Florida,80%,7,10,Older (7-10 years),80,23,ACV minus deductible,
+FL,Florida,80%,11,15,High Age (11-15 years),80,12,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+FL,Florida,80%,16,99,Classic/Aged (16+ years),80,5,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+NY,New York,75%,0,1,New (0-1 year),75,35,ACV minus deductible,
+NY,New York,75%,2,3,Nearly New (2-3 years),75,29,ACV minus deductible,
+NY,New York,75%,4,6,Mid-age (4-6 years),75,30,ACV minus deductible,
+NY,New York,75%,7,10,Older (7-10 years),75,23,ACV minus deductible,
+NY,New York,75%,11,15,High Age (11-15 years),75,14,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+NY,New York,75%,16,99,Classic/Aged (16+ years),75,5,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+OH,Ohio,75%,0,1,New (0-1 year),75,34,ACV minus deductible,
+OH,Ohio,75%,2,3,Nearly New (2-3 years),75,34,ACV minus deductible,
+OH,Ohio,75%,4,6,Mid-age (4-6 years),75,25,ACV minus deductible,
+OH,Ohio,75%,7,10,Older (7-10 years),75,18,ACV minus deductible,
+OH,Ohio,75%,11,15,High Age (11-15 years),75,16,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+OH,Ohio,75%,16,99,Classic/Aged (16+ years),75,6,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+PA,Pennsylvania,110%,0,1,New (0-1 year),110,38,ACV minus deductible,State uses combined rule; both repair cost AND salvage value considered in threshold
+PA,Pennsylvania,110%,2,3,Nearly New (2-3 years),110,34,ACV minus deductible,State uses combined rule; both repair cost AND salvage value considered in threshold
+PA,Pennsylvania,110%,4,6,Mid-age (4-6 years),110,26,ACV minus deductible,State uses combined rule; both repair cost AND salvage value considered in threshold
+PA,Pennsylvania,110%,7,10,Older (7-10 years),110,24,ACV minus deductible,State uses combined rule; both repair cost AND salvage value considered in threshold
+PA,Pennsylvania,110%,11,15,High Age (11-15 years),110,13,ACV minus deductible (depreciation schedule applied),State uses combined rule; both repair cost AND salvage value considered in threshold
+PA,Pennsylvania,110%,16,99,Classic/Aged (16+ years),110,5,ACV minus deductible (depreciation schedule applied),State uses combined rule; both repair cost AND salvage value considered in threshold
+GA,Georgia,75%,0,1,New (0-1 year),75,35,ACV minus deductible,
+GA,Georgia,75%,2,3,Nearly New (2-3 years),75,29,ACV minus deductible,
+GA,Georgia,75%,4,6,Mid-age (4-6 years),75,30,ACV minus deductible,
+GA,Georgia,75%,7,10,Older (7-10 years),75,20,ACV minus deductible,
+GA,Georgia,75%,11,15,High Age (11-15 years),75,12,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+GA,Georgia,75%,16,99,Classic/Aged (16+ years),75,6,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+MI,Michigan,75%,0,1,New (0-1 year),75,33,ACV minus deductible,
+MI,Michigan,75%,2,3,Nearly New (2-3 years),75,31,ACV minus deductible,
+MI,Michigan,75%,4,6,Mid-age (4-6 years),75,30,ACV minus deductible,
+MI,Michigan,75%,7,10,Older (7-10 years),75,22,ACV minus deductible,
+MI,Michigan,75%,11,15,High Age (11-15 years),75,14,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+MI,Michigan,75%,16,99,Classic/Aged (16+ years),75,5,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+NC,North Carolina,75%,0,1,New (0-1 year),75,37,ACV minus deductible,
+NC,North Carolina,75%,2,3,Nearly New (2-3 years),75,30,ACV minus deductible,
+NC,North Carolina,75%,4,6,Mid-age (4-6 years),75,27,ACV minus deductible,
+NC,North Carolina,75%,7,10,Older (7-10 years),75,23,ACV minus deductible,
+NC,North Carolina,75%,11,15,High Age (11-15 years),75,12,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+NC,North Carolina,75%,16,99,Classic/Aged (16+ years),75,5,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+NJ,New Jersey,80%,0,1,New (0-1 year),80,32,ACV minus deductible,
+NJ,New Jersey,80%,2,3,Nearly New (2-3 years),80,30,ACV minus deductible,
+NJ,New Jersey,80%,4,6,Mid-age (4-6 years),80,30,ACV minus deductible,
+NJ,New Jersey,80%,7,10,Older (7-10 years),80,22,ACV minus deductible,
+NJ,New Jersey,80%,11,15,High Age (11-15 years),80,16,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+NJ,New Jersey,80%,16,99,Classic/Aged (16+ years),80,5,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+VA,Virginia,75%,0,1,New (0-1 year),75,34,ACV minus deductible,
+VA,Virginia,75%,2,3,Nearly New (2-3 years),75,33,ACV minus deductible,
+VA,Virginia,75%,4,6,Mid-age (4-6 years),75,27,ACV minus deductible,
+VA,Virginia,75%,7,10,Older (7-10 years),75,22,ACV minus deductible,
+VA,Virginia,75%,11,15,High Age (11-15 years),75,14,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+VA,Virginia,75%,16,99,Classic/Aged (16+ years),75,5,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+WA,Washington,80%,0,1,New (0-1 year),80,33,ACV minus deductible,
+WA,Washington,80%,2,3,Nearly New (2-3 years),80,31,ACV minus deductible,
+WA,Washington,80%,4,6,Mid-age (4-6 years),80,29,ACV minus deductible,
+WA,Washington,80%,7,10,Older (7-10 years),80,23,ACV minus deductible,
+WA,Washington,80%,11,15,High Age (11-15 years),80,13,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+WA,Washington,80%,16,99,Classic/Aged (16+ years),80,5,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+AZ,Arizona,70%,0,1,New (0-1 year),70,33,ACV minus deductible,
+AZ,Arizona,70%,2,3,Nearly New (2-3 years),70,30,ACV minus deductible,
+AZ,Arizona,70%,4,6,Mid-age (4-6 years),70,25,ACV minus deductible,
+AZ,Arizona,70%,7,10,Older (7-10 years),70,19,ACV minus deductible,
+AZ,Arizona,70%,11,15,High Age (11-15 years),70,14,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+AZ,Arizona,70%,16,99,Classic/Aged (16+ years),70,5,ACV minus deductible (depreciation schedule applied),Aged vehicles: ACV may be low; confirm with adjuster before authorizing repairs
+CO,Colorado,100%,0,1,New (0-1 year),100,34,ACV minus deductible,State uses actual total loss rule; repair + storage must equal or exceed ACV before total loss declared
+CO,Colorado,100%,2,3,Nearly New (2-3 years),100,30,ACV minus deductible,State uses actual total loss rule; repair + storage must equal or exceed ACV before total loss declared
+CO,Colorado,100%,4,6,Mid-age (4-6 years),100,27,ACV minus deductible,State uses actual total loss rule; repair + storage must equal or exceed ACV before total loss declared
+CO,Colorado,100%,7,10,Older (7-10 years),100,20,ACV minus deductible,State uses actual total loss rule; repair + storage must equal or exceed ACV before total loss declared
+CO,Colorado,100%,11,15,High Age (11-15 years),100,14,ACV minus deductible (depreciation schedule applied),State uses actual total loss rule; repair + storage must equal or exceed ACV before total loss declared
+CO,Colorado,100%,16,99,Classic/Aged (16+ years),100,5,ACV minus deductible (depreciation schedule applied),State uses actual total loss rule; repair + storage must equal or exceed ACV before total loss declared
