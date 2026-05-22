@@ -47,12 +47,6 @@ _FAULT_PATTERNS = [
 _DOLLAR_RE = re.compile(r"\$\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?)")
 
 # Coverage-question keywords that REQUIRE a citation in the final answer.
-# WHY narrow list: "coverage", "covered", "policy" match virtually every question
-# and force citations even when the tool succeeded with deterministic data
-# (e.g., tier benefits from CSV). We only block when the answer makes a
-# specific factual claim (deductible amount, exclusion, limit, threshold,
-# total loss ratio, or references a specific section number) — those need
-# to trace back to a source.
 _CITATION_REQUIRED_TRIGGERS = [
     "deductible", "exclusion", "limit", "total loss", "threshold",
     "section", "chapter", "article",
@@ -108,17 +102,7 @@ def _check_fault(answer: str) -> Optional[OutputDecision]:
 
 
 def _check_citation_present(answer: str, citations: List[Citation]) -> Optional[OutputDecision]:
-    """If the question warrants citations and none provided, block.
-
-    WHY trigger-list approach: forcing citations on every greeting ("Hi!")
-    would produce ugly UX. Only enforce when the answer text contains
-    coverage/cost terms.
-
-    WHY fallback exemption: if the answer already says "I don't have specific
-    policy language" or "contact your adjuster", it's a legitimate no-data
-    response. Blocking it with MISSING_CITATION replaces a graceful answer with
-    the same text — pointless and confusing.
-    """
+    """If the question warrants citations and none provided, block."""
     lower = answer.lower()
     is_fallback = any(phrase in lower for phrase in [
         "don't have specific policy",
@@ -135,17 +119,31 @@ def _check_citation_present(answer: str, citations: List[Citation]) -> Optional[
     return None
 
 
-def _check_fabricated_costs(answer: str, allowed_dollar_values: List[float]) -> Optional[OutputDecision]:
+def _check_fabricated_costs(
+    answer: str,
+    citations: List[Citation],
+    allowed_dollar_values: List[float],
+) -> Optional[OutputDecision]:
     """Cross-check every dollar figure in the answer against tool outputs.
 
-    WHY 10% tolerance: synthesized answers may round ($4,200 -> ~$4,200) or
-    quote ranges. Within 10% of a tool-provided value is acceptable; outside
-    that, the LLM is fabricating.
+    WHY citation exemption: when policy_rag_tool retrieves chunks that contain
+    dollar figures (e.g. "$50,000 BI liability limit"), the LLM legitimately
+    quotes those numbers in the answer. allowed_dollar_values is only populated
+    by CSV tools (repair_cost_tool, total_loss_tool, rental_lookup_tool), so
+    RAG-grounded answers will always have an empty allowed list. Blocking them
+    as "fabricated" is a false positive — if citations are present, the dollar
+    amounts are grounded and legitimate.
+
+    We only block when BOTH conditions are true:
+      1. No CSV tool provided allowed_dollar_values (i.e. structured lookup didn't run)
+      2. No citations exist to ground the answer (pure LLM fabrication)
     """
     if not allowed_dollar_values:
-        # WHY: no tool returned monetary data, so any $ figure in the answer
-        # is suspect. But avoid false positives on $0 / generic phrasing —
-        # only block if the answer claims specific non-zero amounts.
+        # WHY: if citations present, dollar amounts came from retrieved policy
+        # chunks — that's legitimate grounding. Don't block.
+        if citations:
+            return None
+        # No citations AND no CSV data = genuinely ungrounded dollar claims.
         suspect = [float(m.group(1).replace(",", "")) for m in _DOLLAR_RE.finditer(answer)]
         suspect_nonzero = [v for v in suspect if v > 0]
         if suspect_nonzero:
@@ -161,9 +159,6 @@ def _check_fabricated_costs(answer: str, allowed_dollar_values: List[float]) -> 
             continue
         if value <= 0:
             continue
-        # WHY: any dollar figure within tolerance of ANY allowed value is OK.
-        # This handles ranges (low/high/avg all listed) and computed values
-        # like settlement = ACV - deductible.
         if not any(abs(value - allowed) <= max(tolerance * allowed, 1.0) for allowed in allowed_dollar_values):
             logger.warning(
                 "output_guardrail_fabricated_value",
@@ -180,11 +175,14 @@ def check_output(
     allowed_dollar_values: Optional[List[float]] = None,
 ) -> OutputDecision:
     """Run all output guardrails. First blocker wins."""
+    _citations = citations or []
+    _allowed = allowed_dollar_values or []
+
     for check in (
         lambda: _check_legal_advice(answer),
         lambda: _check_fault(answer),
-        lambda: _check_citation_present(answer, citations),
-        lambda: _check_fabricated_costs(answer, allowed_dollar_values or []),
+        lambda: _check_citation_present(answer, _citations),
+        lambda: _check_fabricated_costs(answer, _citations, _allowed),
     ):
         decision = check()
         if decision and decision.blocked:

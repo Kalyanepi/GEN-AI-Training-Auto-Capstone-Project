@@ -21,6 +21,7 @@ from langgraph.graph import END, StateGraph
 from openai import AsyncOpenAI
 
 from agent.memory import get_session_store
+from agent.param_extractor import extract_damage_type
 from agent.prompts.system_prompt import SYSTEM_PROMPT
 from agent.prompts.tool_prompts import build_synthesis_messages
 from agent.router import IntentRouter
@@ -81,10 +82,28 @@ class Orchestrator:
         return state
 
     async def _node_intent_router(self, state: AgentState) -> AgentState:
+        """Classify intent AND set guardrail state for OUT_OF_SCOPE here.
+
+        WHY here and not in the routing function: LangGraph conditional edge
+        functions should be pure (return an edge key only). Mutating state
+        inside a routing function is undefined behaviour that can silently
+        break on LangGraph version upgrades. We do all state writes in nodes.
+        """
         decision = await self.router.classify(state["user_message"])
         state["detected_intent"] = decision.intent
         state["router_reasoning"] = decision.reasoning
         state["tools_to_invoke"] = list(decision.tools)
+
+        # WHY here: if intent is OUT_OF_SCOPE we need guardrail_reason set
+        # before the routing function decides which edge to take.
+        if decision.intent == "OUT_OF_SCOPE":
+            state["guardrail_reason"] = "OUT_OF_SCOPE"
+            state["final_answer"] = (
+                "I can only help with auto insurance topics: coverage, claims, "
+                "repair estimates, total loss, FNOL, rental, and roadside. "
+                f"For anything else, contact RoadGuard Claims: {settings.adjuster_phone}."
+            )
+
         return state
 
     async def _node_tool_execution(self, state: AgentState) -> AgentState:
@@ -92,7 +111,6 @@ class Orchestrator:
 
         WHY sequential (not parallel): tool outputs may inform later tools'
         kwargs in a future iteration; sequential keeps the graph predictable.
-        For Phase 2's tool set, parallel would shave only ~100ms.
         """
         tool_results: List[Dict[str, Any]] = state.get("tool_results") or []
         all_citations: List[Citation] = list(state.get("citations") or [])
@@ -127,9 +145,6 @@ class Orchestrator:
         tool_results = state.get("tool_results") or []
         any_data = any(t.get("success") for t in tool_results)
 
-        # WHY anti-hallucination short-circuit: if no tool produced data and
-        # we have no retrieved chunks, the LLM has nothing grounded to say.
-        # Return the canonical "no data" message instead of risking fabrication.
         if not any_data:
             state["final_answer"] = (
                 "I don't have specific policy language on that in my documents. "
@@ -185,8 +200,6 @@ class Orchestrator:
             state["guardrail_reason"] = decision.reason
             state["guardrail_message"] = decision.message
             state["final_answer"] = decision.message
-            # WHY clear citations on block: a refused answer should not be
-            # accompanied by citations as if it were a substantive response.
             state["citations"] = []
         else:
             state["output_guardrail_triggered"] = False
@@ -196,7 +209,10 @@ class Orchestrator:
         return state
 
     async def _node_guardrail_response(self, state: AgentState) -> AgentState:
-        """Terminal node for blocked queries — final_answer already set."""
+        """Terminal node for blocked queries — final_answer already set by the
+        node that triggered the block (input_guardrail, intent_router, or
+        output_guardrail). This node is a no-op pass-through that exists so
+        the graph has a named terminal node for blocked paths."""
         if not state.get("final_answer"):
             state["final_answer"] = (
                 "I can only help with auto insurance topics. "
@@ -207,7 +223,6 @@ class Orchestrator:
 
     async def _node_memory_update(self, state: AgentState) -> AgentState:
         sid = state["session_id"]
-        # Update structured facts.
         self.session_store.update_facts(
             sid,
             policy_tier=state.get("policy_tier"),
@@ -219,26 +234,28 @@ class Orchestrator:
             repair_cost=state.get("repair_cost"),
             last_intent=state.get("detected_intent"),
         )
-        # Append turn.
         self.session_store.append_turn(sid, "user", state["user_message"])
         if state.get("final_answer"):
             self.session_store.append_turn(sid, "assistant", state["final_answer"])
         return state
 
-    # ----------------- Routing helpers -----------------
+    # ----------------- Routing helpers (pure — no state mutation) -----------------
 
     def _route_after_input_guardrail(self, state: AgentState) -> str:
         return "guardrail_response" if state.get("input_guardrail_triggered") else "intent_router"
 
     def _route_after_intent(self, state: AgentState) -> str:
-        if state.get("detected_intent") == "OUT_OF_SCOPE" or not state.get("tools_to_invoke"):
-            if state.get("detected_intent") == "OUT_OF_SCOPE":
-                state["guardrail_reason"] = "OUT_OF_SCOPE"
-                state["final_answer"] = (
-                    "I can only help with auto insurance topics: coverage, claims, "
-                    "repair estimates, total loss, FNOL, rental, and roadside."
-                )
-                return "guardrail_response"
+        """Pure routing function — reads state, returns edge key only.
+
+        WHY no state mutations here: LangGraph routing functions are called
+        outside the normal node execution path. Mutations here may not
+        propagate correctly and can silently break on framework upgrades.
+        All state writes happen in _node_intent_router before this is called.
+        """
+        intent = state.get("detected_intent")
+        tools = state.get("tools_to_invoke") or []
+        if intent == "OUT_OF_SCOPE" or not tools:
+            return "guardrail_response"
         return "tool_execution"
 
     def _route_after_output_guardrail(self, state: AgentState) -> str:
@@ -248,11 +265,20 @@ class Orchestrator:
 
     @staticmethod
     def _build_tool_kwargs(state: AgentState) -> Dict[str, Any]:
-        """Common kwargs every tool may consume. Extra kwargs are ignored by **_."""
+        """Common kwargs every tool may consume. Extra kwargs are ignored by **_.
+
+        WHY extract_damage_type: repair_cost_tool's fuzzy matcher expects a
+        short phrase like "rear bumper replacement", not a full sentence.
+        Passing the raw user_message gives SequenceMatcher a ~5% ratio (well
+        below the 0.60 threshold), causing every repair estimate to fail.
+        extract_damage_type pulls out just the relevant damage phrase.
+        """
+        user_msg = state["user_message"]
+        damage = extract_damage_type(user_msg) or user_msg
         return {
-            "query": state["user_message"],
-            "incident_description": state["user_message"],
-            "damage_type": state["user_message"],   # repair_cost_tool fuzzy-matches
+            "query": user_msg,
+            "incident_description": user_msg,
+            "damage_type": damage,
             "policy_tier": state.get("policy_tier"),
             "coverage_type": state.get("coverage_type"),
             "vehicle_category": state.get("vehicle_category"),
@@ -306,7 +332,6 @@ class Orchestrator:
         initial_state.setdefault("tool_results", [])
         initial_state.setdefault("citations", [])
         initial_state.setdefault("allowed_dollar_values", [])
-        # Hydrate conversation history from session store.
         sid = initial_state.get("session_id")
         if sid:
             initial_state["conversation_history"] = self.session_store.get_history(sid)
