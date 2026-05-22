@@ -11,7 +11,7 @@ def init_session_state() -> None:
     if "session_id" not in st.session_state:
         st.session_state.session_id = str(uuid.uuid4())
     if "messages" not in st.session_state:
-        st.session_state.messages = []  # [{role, content, citations, latency_ms, tools_used, breakdown}]
+        st.session_state.messages = []
     if "policy_tier" not in st.session_state:
         st.session_state.policy_tier = "premium"
     if "vehicle_category" not in st.session_state:
@@ -20,9 +20,19 @@ def init_session_state() -> None:
         st.session_state.state_code = None
     if "coverage_type" not in st.session_state:
         st.session_state.coverage_type = None
+    # New structured fields — passed directly to tools (no regex needed).
+    if "vehicle_year" not in st.session_state:
+        st.session_state.vehicle_year = None
+    if "acv" not in st.session_state:
+        st.session_state.acv = None
+    if "repair_cost" not in st.session_state:
+        st.session_state.repair_cost = None
 
 
 def reset_session() -> None:
     """Generate a new session id and clear chat — used by the New Session button."""
     st.session_state.session_id = str(uuid.uuid4())
     st.session_state.messages = []
+    st.session_state.vehicle_year = None
+    st.session_state.acv = None
+    st.session_state.repair_cost = None
