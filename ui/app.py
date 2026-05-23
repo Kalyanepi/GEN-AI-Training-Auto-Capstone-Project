@@ -125,7 +125,7 @@ header[data-testid="stHeader"], [data-testid="stDecoration"],
 .stApp, .stApp > .main, [data-testid="stAppViewContainer"] {{ background:var(--bg) !important; }}
 .main .block-container {{ padding:0 !important; max-width:100% !important; }}
 body, .stMarkdown, p, div, span, label, input, textarea, button {{
-  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif !important;
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji",sans-serif !important;
   -webkit-font-smoothing:antialiased;
 }}
 ::-webkit-scrollbar {{ width:7px; height:7px; }}
@@ -433,6 +433,39 @@ section.main > div.block-container {{ padding:calc(var(--nav-h) + 20px) 44px 72p
 /* citations */
 .rg-citation-pdf {{ background:rgba(96,165,250,.07); border-left:3px solid var(--blue); border-radius:4px; padding:9px 11px; font-size:12px; color:var(--text-2); font-style:italic; }}
 .rg-citation-csv {{ background:rgba(16,185,129,.07); border-left:3px solid var(--green); border-radius:4px; padding:9px 11px; font-size:12px; color:var(--text-2); font-style:italic; }}
+
+/* citation / source expanders — Streamlit defaults render the header text in
+   its internal theme color (light), which is invisible on our surface. Force
+   readable contrast in BOTH themes; accent only on hover. */
+[data-testid="stExpander"] {{
+  border:1px solid var(--border) !important;
+  border-radius:var(--radius-sm) !important;
+  background:var(--surface) !important;
+  margin-bottom:6px !important;
+  overflow:hidden;
+}}
+[data-testid="stExpander"] details {{ background:var(--surface) !important; border:0 !important; }}
+[data-testid="stExpander"] summary {{
+  color:var(--text) !important; font-size:12.5px !important; font-weight:600 !important;
+}}
+[data-testid="stExpander"] summary p,
+[data-testid="stExpander"] summary span,
+[data-testid="stExpander"] summary div,
+[data-testid="stExpander"] summary label {{ color:var(--text) !important; }}
+[data-testid="stExpander"] summary:hover,
+[data-testid="stExpander"] summary:hover p,
+[data-testid="stExpander"] summary:hover span {{ color:var(--accent) !important; }}
+[data-testid="stExpander"] summary svg,
+[data-testid="stExpander"] [data-testid="stExpanderToggleIcon"] {{ color:var(--text-2) !important; fill:var(--text-2) !important; }}
+[data-testid="stExpander"] [data-testid="stExpanderDetails"] {{ background:var(--surface) !important; }}
+/* captions inside the expander (relevance bar, label, chunk id) */
+[data-testid="stExpander"] [data-testid="stCaptionContainer"],
+[data-testid="stExpander"] [data-testid="stCaptionContainer"] p,
+[data-testid="stExpander"] [data-testid="stCaptionContainer"] span {{ color:var(--text-2) !important; }}
+[data-testid="stExpander"] code {{
+  background:var(--surface2) !important; color:var(--text) !important;
+  border:1px solid var(--border) !important; border-radius:5px; padding:1px 5px;
+}}
 
 /* metric pills */
 .rg-metrics {{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; align-items:center; }}

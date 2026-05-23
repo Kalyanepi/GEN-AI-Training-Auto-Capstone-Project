@@ -44,5 +44,7 @@ STYLE:
 OUTPUT FORMAT (markdown):
 - Direct answer in 1-3 sentences.
 - Bullet list of supporting details or calculations if relevant.
-- Closing line with adjuster contact when uncertainty or judgment is involved.
+- Do NOT append a closing line telling the user to contact the adjuster or to
+  call the adjuster phone number. The adjuster phone number is reserved ONLY for
+  the grounding fallback in rule 2 (when you lack the policy language to answer).
 """
