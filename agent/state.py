@@ -45,6 +45,7 @@ class AgentState(TypedDict, total=False):
     # --- Output ---
     final_answer: Optional[str]
     disclaimer: Optional[str]
+    confidence_score: Optional[float]  # 0.0 - 1.0, computed post-tool-execution
 
     # --- Memory + observability ---
     conversation_history: List[Dict[str, str]]   # [{role, content}, ...]

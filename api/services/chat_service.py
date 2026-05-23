@@ -94,6 +94,7 @@ class ChatService:
             trace_url=build_trace_url(final.get("trace_id")),
             latency_ms=int(final.get("latency_ms") or 0),
             calculation_breakdown=calculation_breakdown,
+            confidence_score=final.get("confidence_score"),
         )
 
     @staticmethod

@@ -13,10 +13,19 @@ from openai import OpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from openai import RateLimitError, APIError, APITimeoutError
 
+from agent.cache import LRUCache, normalize_text
 from api.config import settings
 from observability.logger import get_logger
 
 logger = get_logger(__name__)
+
+# Query-embedding cache: identical user queries produce identical vectors,
+# so caching saves an OpenAI round-trip on the hot retrieval path.
+_embed_query_cache: LRUCache[str, np.ndarray] = LRUCache(
+    name="query_embeddings",
+    max_size=settings.embed_cache_size,
+    ttl_seconds=settings.embed_cache_ttl_seconds,
+)
 
 
 class Embedder:
@@ -67,9 +76,17 @@ class Embedder:
 
         Returns shape (1, dim) for FAISS compatibility.
         """
+        cache_key = normalize_text(text)
+        cached = _embed_query_cache.get(cache_key)
+        if cached is not None:
+            logger.debug("embed_cache_hit", chars=len(text))
+            return cached
+
         vector = self._embed_batch([text])[0]
         arr = np.array([vector], dtype=np.float32)
         norm = np.linalg.norm(arr)
         if norm == 0:
             return arr
-        return arr / norm
+        result = arr / norm
+        _embed_query_cache.set(cache_key, result)
+        return result

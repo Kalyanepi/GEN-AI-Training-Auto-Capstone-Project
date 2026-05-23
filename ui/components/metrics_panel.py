@@ -27,8 +27,9 @@ _INTENT_LABELS = {
     "RENTAL_LOOKUP":    "Rental Lookup",
     "ROADSIDE":         "Roadside",
     "UM_UIM":           "UM/UIM",
-    "MULTI_INTENT":     "Multi-Intent",
-    "OUT_OF_SCOPE":     "Out of Scope",
+    "MULTI_INTENT":         "Multi-Intent",
+    "CLARIFICATION_NEEDED": "Clarification",
+    "OUT_OF_SCOPE":         "Out of Scope",
 }
 
 _GUARDRAIL_LABELS = {
@@ -63,11 +64,24 @@ def _intent_pill(intent: str) -> str:
     return f"<span class='rg-pill rg-pill-gray'>{label}</span>"
 
 
+def _confidence_pill(score: float) -> str:
+    """Color-coded confidence pill: ≥0.8 green, ≥0.5 amber, <0.5 red."""
+    pct = int(round(score * 100))
+    if score >= 0.8:
+        css = "rg-pill-green"
+    elif score >= 0.5:
+        css = "rg-pill-orange"
+    else:
+        css = "rg-pill-red"
+    return f"<span class='rg-pill {css}' title='Groundedness confidence'>◆ {pct}% confident</span>"
+
+
 def render_metrics(
     latency_ms: int,
     tools_used: List[str],
     intent: Optional[str],
     trace_url: Optional[str],
+    confidence_score: Optional[float] = None,
     guardrail_reason: Optional[str] = None,
 ) -> None:
     parts: List[str] = []
@@ -75,6 +89,10 @@ def render_metrics(
     # Latency.
     if latency_ms:
         parts.append(_latency_pill(latency_ms))
+
+    # Confidence — only when not blocked by a guardrail (where score=0 is uninformative).
+    if confidence_score is not None and not guardrail_reason:
+        parts.append(_confidence_pill(confidence_score))
 
     # Intent.
     if intent and intent != "OUT_OF_SCOPE":
@@ -84,12 +102,14 @@ def render_metrics(
     for t in tools_used:
         parts.append(_tool_pill(t))
 
-    # Trace link — show even if URL may be stale; useful in development.
+    # Trace link — proper blue button styling, jumps to LangSmith trace.
     if trace_url:
         parts.append(
-            f"<a href='{trace_url}' target='_blank' "
-            f"style='font-size:0.75rem; color:#2980b9; text-decoration:none;'>"
-            f"↗ LangSmith Trace</a>"
+            f"<a href='{trace_url}' target='_blank' rel='noopener' "
+            f"class='rg-langsmith-btn' title='View this run in LangSmith'>"
+            f"<i class='ti ti-arrow-up-right'></i>"
+            f"<span>LangSmith</span>"
+            f"</a>"
         )
 
     if parts:

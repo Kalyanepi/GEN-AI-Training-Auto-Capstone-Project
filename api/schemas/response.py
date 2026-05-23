@@ -37,6 +37,7 @@ class ChatResponse(BaseModel):
     trace_id: Optional[str] = None
     latency_ms: int = 0
     calculation_breakdown: Optional[str] = None  # surfaced when total_loss_tool fires
+    confidence_score: Optional[float] = None     # 0.0 - 1.0 heuristic groundedness score
 
 
 class HealthResponse(BaseModel):

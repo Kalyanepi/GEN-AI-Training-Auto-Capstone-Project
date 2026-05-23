@@ -160,3 +160,253 @@ def extract_damage_type(message: str) -> Optional[str]:
     if not candidates:
         return None
     return max(candidates, key=len).strip()
+
+
+def extract_damage_types(message: str) -> list[str]:
+    """Extract ALL distinct damage phrases from the message.
+
+    WHY a list: real users describe multiple damages in one turn
+    ("cracked headlight and hood dent"). Returning only one would skip
+    the others. The tool layer fans out CSV lookups for each and the
+    synthesis LLM aggregates the results.
+    """
+    if not message:
+        return []
+    matches = _DAMAGE_RE.findall(message)
+    if not matches:
+        return []
+    seen = set()
+    out: list[str] = []
+    for m in matches:
+        s = m.strip().lower()
+        if s and s not in seen:
+            seen.add(s)
+            out.append(m.strip())
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Vehicle make/model → CSV vehicle_category mapper
+# ---------------------------------------------------------------------------
+#
+# WHY a static dictionary (not an LLM): users say "Honda Civic" but the
+# RepairCost CSV uses categories like "Economy/Compact". A small lookup
+# table covers ~90% of common US vehicles deterministically with zero
+# latency / cost. Unknown makes fall through and the tool aggregates
+# across all categories — still better than refusing.
+#
+# Categories MUST match exact strings in RepairCost_ReferenceTable.csv:
+#   Economy/Compact, Mid-size Sedan, Full-size Sedan, Luxury Sedan,
+#   Compact SUV/Crossover, Mid-size SUV, Full-size SUV/Truck, Luxury SUV
+#
+# Ordered: longer make+model phrases checked before single-word makes.
+
+_VEHICLE_MODEL_MAP: dict[str, str] = {
+    # ── Economy / Compact ──
+    "honda civic": "Economy/Compact",
+    "honda fit": "Economy/Compact",
+    "toyota corolla": "Economy/Compact",
+    "toyota yaris": "Economy/Compact",
+    "nissan sentra": "Economy/Compact",
+    "nissan versa": "Economy/Compact",
+    "hyundai elantra": "Economy/Compact",
+    "hyundai accent": "Economy/Compact",
+    "kia forte": "Economy/Compact",
+    "kia rio": "Economy/Compact",
+    "mazda 3": "Economy/Compact",
+    "mazda3": "Economy/Compact",
+    "ford fiesta": "Economy/Compact",
+    "ford focus": "Economy/Compact",
+    "chevrolet sonic": "Economy/Compact",
+    "chevrolet spark": "Economy/Compact",
+    "chevrolet cruze": "Economy/Compact",
+    "volkswagen jetta": "Economy/Compact",
+    "vw jetta": "Economy/Compact",
+    "subaru impreza": "Economy/Compact",
+    "mitsubishi mirage": "Economy/Compact",
+    # ── Mid-size Sedan ──
+    "honda accord": "Mid-size Sedan",
+    "toyota camry": "Mid-size Sedan",
+    "nissan altima": "Mid-size Sedan",
+    "hyundai sonata": "Mid-size Sedan",
+    "kia optima": "Mid-size Sedan",
+    "kia k5": "Mid-size Sedan",
+    "mazda 6": "Mid-size Sedan",
+    "mazda6": "Mid-size Sedan",
+    "ford fusion": "Mid-size Sedan",
+    "chevrolet malibu": "Mid-size Sedan",
+    "subaru legacy": "Mid-size Sedan",
+    "volkswagen passat": "Mid-size Sedan",
+    "vw passat": "Mid-size Sedan",
+    # ── Full-size Sedan ──
+    "toyota avalon": "Full-size Sedan",
+    "nissan maxima": "Full-size Sedan",
+    "chrysler 300": "Full-size Sedan",
+    "dodge charger": "Full-size Sedan",
+    "chevrolet impala": "Full-size Sedan",
+    "ford taurus": "Full-size Sedan",
+    "kia cadenza": "Full-size Sedan",
+    "hyundai azera": "Full-size Sedan",
+    # ── Luxury Sedan ──
+    "bmw 3 series": "Luxury Sedan",
+    "bmw 5 series": "Luxury Sedan",
+    "bmw 7 series": "Luxury Sedan",
+    "mercedes c-class": "Luxury Sedan",
+    "mercedes e-class": "Luxury Sedan",
+    "mercedes s-class": "Luxury Sedan",
+    "mercedes-benz c-class": "Luxury Sedan",
+    "mercedes-benz e-class": "Luxury Sedan",
+    "audi a3": "Luxury Sedan",
+    "audi a4": "Luxury Sedan",
+    "audi a6": "Luxury Sedan",
+    "audi a8": "Luxury Sedan",
+    "lexus is": "Luxury Sedan",
+    "lexus es": "Luxury Sedan",
+    "lexus gs": "Luxury Sedan",
+    "lexus ls": "Luxury Sedan",
+    "infiniti q50": "Luxury Sedan",
+    "infiniti q70": "Luxury Sedan",
+    "acura tlx": "Luxury Sedan",
+    "acura rlx": "Luxury Sedan",
+    "cadillac cts": "Luxury Sedan",
+    "cadillac ats": "Luxury Sedan",
+    "tesla model 3": "Luxury Sedan",
+    "tesla model s": "Luxury Sedan",
+    # ── Compact SUV/Crossover ──
+    "honda cr-v": "Compact SUV/Crossover",
+    "honda crv": "Compact SUV/Crossover",
+    "honda hr-v": "Compact SUV/Crossover",
+    "toyota rav4": "Compact SUV/Crossover",
+    "toyota rav-4": "Compact SUV/Crossover",
+    "nissan rogue": "Compact SUV/Crossover",
+    "mazda cx-5": "Compact SUV/Crossover",
+    "mazda cx5": "Compact SUV/Crossover",
+    "ford escape": "Compact SUV/Crossover",
+    "chevrolet equinox": "Compact SUV/Crossover",
+    "subaru forester": "Compact SUV/Crossover",
+    "subaru crosstrek": "Compact SUV/Crossover",
+    "hyundai tucson": "Compact SUV/Crossover",
+    "kia sportage": "Compact SUV/Crossover",
+    "jeep compass": "Compact SUV/Crossover",
+    "jeep renegade": "Compact SUV/Crossover",
+    # ── Mid-size SUV ──
+    "honda pilot": "Mid-size SUV",
+    "honda passport": "Mid-size SUV",
+    "toyota highlander": "Mid-size SUV",
+    "toyota 4runner": "Mid-size SUV",
+    "nissan murano": "Mid-size SUV",
+    "nissan pathfinder": "Mid-size SUV",
+    "ford explorer": "Mid-size SUV",
+    "ford edge": "Mid-size SUV",
+    "chevrolet traverse": "Mid-size SUV",
+    "chevrolet blazer": "Mid-size SUV",
+    "hyundai santa fe": "Mid-size SUV",
+    "kia sorento": "Mid-size SUV",
+    "kia telluride": "Mid-size SUV",
+    "mazda cx-9": "Mid-size SUV",
+    "subaru ascent": "Mid-size SUV",
+    "jeep grand cherokee": "Mid-size SUV",
+    "jeep wrangler": "Mid-size SUV",
+    # ── Full-size SUV/Truck ──
+    "ford f-150": "Full-size SUV/Truck",
+    "ford f150": "Full-size SUV/Truck",
+    "ford f-250": "Full-size SUV/Truck",
+    "ford f-350": "Full-size SUV/Truck",
+    "ford expedition": "Full-size SUV/Truck",
+    "chevrolet silverado": "Full-size SUV/Truck",
+    "chevrolet tahoe": "Full-size SUV/Truck",
+    "chevrolet suburban": "Full-size SUV/Truck",
+    "gmc sierra": "Full-size SUV/Truck",
+    "gmc yukon": "Full-size SUV/Truck",
+    "ram 1500": "Full-size SUV/Truck",
+    "ram 2500": "Full-size SUV/Truck",
+    "dodge ram": "Full-size SUV/Truck",
+    "toyota tundra": "Full-size SUV/Truck",
+    "toyota sequoia": "Full-size SUV/Truck",
+    "nissan titan": "Full-size SUV/Truck",
+    "nissan armada": "Full-size SUV/Truck",
+    # ── Luxury SUV ──
+    "bmw x3": "Luxury SUV",
+    "bmw x5": "Luxury SUV",
+    "bmw x7": "Luxury SUV",
+    "mercedes glc": "Luxury SUV",
+    "mercedes gle": "Luxury SUV",
+    "mercedes gls": "Luxury SUV",
+    "mercedes g-class": "Luxury SUV",
+    "audi q3": "Luxury SUV",
+    "audi q5": "Luxury SUV",
+    "audi q7": "Luxury SUV",
+    "audi q8": "Luxury SUV",
+    "lexus rx": "Luxury SUV",
+    "lexus gx": "Luxury SUV",
+    "lexus lx": "Luxury SUV",
+    "lexus nx": "Luxury SUV",
+    "infiniti qx50": "Luxury SUV",
+    "infiniti qx60": "Luxury SUV",
+    "infiniti qx80": "Luxury SUV",
+    "acura rdx": "Luxury SUV",
+    "acura mdx": "Luxury SUV",
+    "cadillac escalade": "Luxury SUV",
+    "cadillac xt5": "Luxury SUV",
+    "porsche cayenne": "Luxury SUV",
+    "porsche macan": "Luxury SUV",
+    "tesla model x": "Luxury SUV",
+    "tesla model y": "Luxury SUV",
+    "land rover": "Luxury SUV",
+    "range rover": "Luxury SUV",
+}
+
+# Brand-only fallback for unknown models. Conservative defaults.
+_VEHICLE_BRAND_FALLBACK: dict[str, str] = {
+    "bmw": "Luxury Sedan",
+    "mercedes": "Luxury Sedan",
+    "mercedes-benz": "Luxury Sedan",
+    "audi": "Luxury Sedan",
+    "lexus": "Luxury Sedan",
+    "infiniti": "Luxury Sedan",
+    "acura": "Luxury Sedan",
+    "cadillac": "Luxury Sedan",
+    "porsche": "Luxury Sedan",
+    "tesla": "Luxury Sedan",
+    "honda": "Mid-size Sedan",
+    "toyota": "Mid-size Sedan",
+    "nissan": "Mid-size Sedan",
+    "hyundai": "Mid-size Sedan",
+    "kia": "Mid-size Sedan",
+    "mazda": "Mid-size Sedan",
+    "ford": "Mid-size Sedan",
+    "chevrolet": "Mid-size Sedan",
+    "chevy": "Mid-size Sedan",
+    "subaru": "Mid-size Sedan",
+    "volkswagen": "Economy/Compact",
+    "vw": "Economy/Compact",
+    "jeep": "Compact SUV/Crossover",
+    "ram": "Full-size SUV/Truck",
+    "gmc": "Full-size SUV/Truck",
+    "dodge": "Mid-size Sedan",
+    "chrysler": "Mid-size Sedan",
+    "mitsubishi": "Economy/Compact",
+}
+
+
+def extract_vehicle_category(message: str) -> Optional[str]:
+    """Map a free-text vehicle reference to a CSV vehicle_category.
+
+    Examples:
+      "I drive a Honda Civic"   -> "Economy/Compact"
+      "my BMW X5 needs repair"  -> "Luxury SUV"
+      "2018 Toyota"             -> "Mid-size Sedan"  (brand fallback)
+      "my car"                  -> None
+    """
+    if not message:
+        return None
+    lower = message.lower()
+    # 1. Try most-specific make+model phrases first (longest first).
+    for phrase in sorted(_VEHICLE_MODEL_MAP.keys(), key=len, reverse=True):
+        if re.search(rf"\b{re.escape(phrase)}\b", lower):
+            return _VEHICLE_MODEL_MAP[phrase]
+    # 2. Brand-only fallback.
+    for brand in sorted(_VEHICLE_BRAND_FALLBACK.keys(), key=len, reverse=True):
+        if re.search(rf"\b{re.escape(brand)}\b", lower):
+            return _VEHICLE_BRAND_FALLBACK[brand]
+    return None
