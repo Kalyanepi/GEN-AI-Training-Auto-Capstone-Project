@@ -12,16 +12,27 @@ from typing import List, Optional
 
 from openai import AsyncOpenAI
 
+from agent.cache import LRUCache, normalize_text
 from agent.prompts.router_prompt import ROUTER_SYSTEM_PROMPT
 from api.config import settings
 from observability.logger import get_logger
 
 logger = get_logger(__name__)
 
+# Module-level cache shared across requests. WHY module-level: same router
+# decision for the same prompt is identical; one cache per process avoids
+# duplicate gpt-4o-mini calls in burst traffic.
+_router_cache: LRUCache[str, "RouterDecision"] = LRUCache(
+    name="router_decisions",
+    max_size=settings.router_cache_size,
+    ttl_seconds=settings.router_cache_ttl_seconds,
+)
+
 
 VALID_INTENTS = {
     "COVERAGE_QA", "REPAIR_ESTIMATE", "TOTAL_LOSS", "FNOL_GUIDANCE",
-    "RENTAL_LOOKUP", "ROADSIDE", "UM_UIM", "MULTI_INTENT", "OUT_OF_SCOPE",
+    "RENTAL_LOOKUP", "ROADSIDE", "UM_UIM", "MULTI_INTENT",
+    "CLARIFICATION_NEEDED", "OUT_OF_SCOPE",
 }
 
 VALID_TOOLS = {
@@ -35,6 +46,7 @@ class RouterDecision:
     intent: str
     tools: List[str]
     reasoning: str
+    clarification_question: Optional[str] = None
 
 
 class IntentRouter:
@@ -48,6 +60,12 @@ class IntentRouter:
         WHY this fallback: COVERAGE_QA + RAG is the safest default — it grounds
         in retrieved chunks and never fabricates. Better than refusing to answer.
         """
+        cache_key = normalize_text(user_message)
+        cached = _router_cache.get(cache_key)
+        if cached is not None:
+            logger.info("router_cache_hit", intent=cached.intent, tools=cached.tools)
+            return cached
+
         try:
             resp = await self.client.chat.completions.create(
                 model=self.model,
@@ -64,20 +82,41 @@ class IntentRouter:
             intent = str(parsed.get("intent", "")).strip().upper()
             tools = parsed.get("tools") or []
             reasoning = str(parsed.get("reasoning", "")).strip()
+            clarification = str(parsed.get("clarification_question") or "").strip() or None
 
             if intent not in VALID_INTENTS:
                 logger.warning("router_invalid_intent", raw=intent)
                 intent = "COVERAGE_QA"
             tools = [t for t in tools if t in VALID_TOOLS]
-            if intent != "OUT_OF_SCOPE" and not tools:
-                # Always provide at least one grounded tool for non-out-of-scope queries.
+
+            # Terminal intents must not invoke tools.
+            if intent in {"OUT_OF_SCOPE", "CLARIFICATION_NEEDED"}:
+                tools = []
+            elif not tools:
+                # Always provide at least one grounded tool for non-terminal queries.
                 tools = ["policy_rag_tool"]
 
-            decision = RouterDecision(intent=intent, tools=tools, reasoning=reasoning)
+            # Safety net: if the model picked CLARIFICATION_NEEDED but forgot the
+            # question, supply a generic one rather than returning an empty answer.
+            if intent == "CLARIFICATION_NEEDED" and not clarification:
+                clarification = (
+                    "Could you give me a bit more detail — for example, the coverage "
+                    "type, the incident, or what you'd like me to look up?"
+                )
+
+            decision = RouterDecision(
+                intent=intent,
+                tools=tools,
+                reasoning=reasoning,
+                clarification_question=clarification,
+            )
             logger.info("router_decision", intent=intent, tools=tools, reasoning=reasoning)
+            _router_cache.set(cache_key, decision)
             return decision
         except Exception as e:
             logger.error("router_failed_fallback", error=str(e), exc_info=True)
+            # WHY: don't cache fallback decisions — the underlying error may be transient
+            # (rate limit, network), and we want the next request to retry the real call.
             return RouterDecision(
                 intent="COVERAGE_QA",
                 tools=["policy_rag_tool"],

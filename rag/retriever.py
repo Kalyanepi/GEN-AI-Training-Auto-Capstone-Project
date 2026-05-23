@@ -13,14 +13,25 @@ recognizes this and returns the graceful "no data" message.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
+from agent.cache import LRUCache, normalize_text
 from api.config import settings
 from ingestion.embedder import Embedder
 from observability.logger import get_logger
 from rag.faiss_store import FaissStore, get_store
 
 logger = get_logger(__name__)
+
+# Cache the FULL retrieval result (filtered + scored chunks) for a given
+# (query, filter, top_k, threshold) tuple. Saves the embed → FAISS search →
+# post-filter pipeline on repeat queries. Embedding cache is upstream and
+# still helps when the query is the same but filters differ.
+_retrieval_cache: LRUCache[Tuple, List["ChunkResult"]] = LRUCache(
+    name="retrieval_results",
+    max_size=settings.retrieval_cache_size,
+    ttl_seconds=settings.retrieval_cache_ttl_seconds,
+)
 
 
 @dataclass
@@ -60,7 +71,25 @@ class Retriever:
         threshold = similarity_threshold if similarity_threshold is not None else settings.similarity_threshold
         overfetch = top_k * settings.retrieval_overfetch_multiplier
 
-        # 1. Embed query (already L2-normalized by Embedder).
+        # Cache key: include all knobs that change the result set.
+        cache_key = (
+            normalize_text(query),
+            coverage_type or "",
+            policy_tier or "",
+            doc_type or "",
+            top_k,
+            round(threshold, 4),
+        )
+        cached = _retrieval_cache.get(cache_key)
+        if cached is not None:
+            logger.info(
+                "retrieval_cache_hit",
+                query_preview=query[:80],
+                returned=len(cached),
+            )
+            return cached
+
+        # 1. Embed query (already L2-normalized by Embedder; itself cached).
         query_vec = self.embedder.embed_query(query)
 
         # 2. Search FAISS — over-retrieve so post-filter has candidates.
@@ -90,6 +119,7 @@ class Retriever:
             returned=len(results),
             threshold=threshold,
         )
+        _retrieval_cache.set(cache_key, results)
         return results
 
     @staticmethod

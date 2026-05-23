@@ -40,9 +40,37 @@ async def lifespan(app: FastAPI):
     # Build orchestrator (compiles graph + instantiates tools).
     from agent.orchestrator import get_orchestrator
     get_orchestrator()
+
+    # Pre-warm hot paths so the first real chat doesn't pay first-load costs.
+    # WHY each item: query embedding pays ~250ms TLS+API, reranker pays ~3s
+    # torch import + model download/load. Doing them now means the first user
+    # request feels as fast as steady-state.
+    _prewarm_hot_paths()
+
     logger.info("api_startup_complete")
     yield
     logger.info("api_shutdown")
+
+
+def _prewarm_hot_paths() -> None:
+    """Fire one no-op embed + one no-op rerank so first-request latency drops.
+
+    Failures here are non-fatal — startup must succeed even if OpenAI is down
+    or the cross-encoder model can't be downloaded.
+    """
+    try:
+        from ingestion.embedder import Embedder
+        Embedder().embed_query("warmup")
+        logger.info("embedder_prewarmed")
+    except Exception as e:
+        logger.warning("embedder_prewarm_failed", error=str(e))
+    if settings.reranker_enabled:
+        try:
+            from rag.reranker import _get_model
+            _get_model()
+            logger.info("reranker_prewarmed")
+        except Exception as e:
+            logger.warning("reranker_prewarm_failed", error=str(e))
 
 
 def create_app() -> FastAPI:

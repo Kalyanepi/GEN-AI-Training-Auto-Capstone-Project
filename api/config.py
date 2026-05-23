@@ -60,6 +60,16 @@ class Settings(BaseSettings):
     max_citations_per_response: int = 4
     citation_excerpt_max_chars: int = 150
 
+    # --- Cache layer (LRU) ---
+    # Router decisions and query embeddings are deterministic for a given input,
+    # so caching them eliminates redundant OpenAI calls for repeated questions.
+    router_cache_size: int = 256
+    router_cache_ttl_seconds: int = 3600   # 1 hour; covers a typical session
+    embed_cache_size: int = 512
+    embed_cache_ttl_seconds: int = 3600
+    retrieval_cache_size: int = 256
+    retrieval_cache_ttl_seconds: int = 1800   # 30min; ingested chunks rarely change in-session
+
     # --- Guardrails ---
     fuzzy_damage_match_threshold: float = 0.60
     fabricated_cost_tolerance_pct: float = 10.0
