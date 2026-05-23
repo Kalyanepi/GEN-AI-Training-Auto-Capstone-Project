@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(default="sk-replace-me")
     openai_embedding_model: str = "text-embedding-3-small"
     openai_router_model: str = "gpt-4o-mini"
-    openai_synthesis_model: str = "gpt-4o"
+    openai_synthesis_model: str = "gpt-4o-mini"
     openai_guardrail_model: str = "gpt-4o-mini"
 
     # --- LangSmith ---
@@ -74,7 +74,7 @@ class Settings(BaseSettings):
     fuzzy_damage_match_threshold: float = 0.60
     fabricated_cost_tolerance_pct: float = 10.0
     adjuster_phone: str = "1-800-555-0601"
-    adjuster_url: str = "roadguardauto.com/claims"
+    adjuster_url: str = "autoinsurance.com/claims"
 
     # --- API ---
     api_host: str = "0.0.0.0"

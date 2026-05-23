@@ -4,27 +4,31 @@
     "question": "What's my rental car limit on Premium Guard?",
     "policy_tier": "premium",
     "expected_keywords": ["$50", "30 days", "rental"],
-    "expected_intent": "RENTAL_LOOKUP"
+    "expected_intent": "RENTAL_LOOKUP",
+    "expected_output": "Under Premium Guard, your rental car reimbursement limit is $50 per day for up to 30 days per covered claim."
   },
   {
     "id": "ra-02",
     "question": "How many lockout services do I get on Comprehensive Elite?",
     "policy_tier": "elite",
     "expected_keywords": ["lockout", "unlimited"],
-    "expected_intent": "ROADSIDE"
+    "expected_intent": "ROADSIDE",
+    "expected_output": "On the Comprehensive Elite plan, lockout service is unlimited — there is no annual cap on the number of lockout calls you can make."
   },
   {
     "id": "ra-03",
     "question": "How many tow calls per term do I have on Standard Shield?",
     "policy_tier": "standard",
     "expected_keywords": ["2", "tow", "$75"],
-    "expected_intent": "ROADSIDE"
+    "expected_intent": "ROADSIDE",
+    "expected_output": "Standard Shield includes 2 towing services per policy term, with a maximum reimbursement of $75 per tow."
   },
   {
     "id": "ra-04",
     "question": "What's the trip interruption benefit on Comprehensive Elite?",
     "policy_tier": "elite",
     "expected_keywords": ["$600", "trip interruption"],
-    "expected_intent": "ROADSIDE"
+    "expected_intent": "ROADSIDE",
+    "expected_output": "The Comprehensive Elite plan includes a trip interruption benefit of up to $600 per occurrence for lodging and meal expenses when your vehicle is disabled more than 100 miles from home."
   }
 ]

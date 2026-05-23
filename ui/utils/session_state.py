@@ -41,3 +41,4 @@ def reset_session() -> None:
     st.session_state.context_mode     = None
     st.session_state.pending_faq      = None
     st.session_state.faq_indices      = None   # forces new random FAQ set
+    st.session_state["_resetting"]    = True   # suppresses welcome flash on rerun

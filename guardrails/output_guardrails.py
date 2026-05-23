@@ -56,22 +56,19 @@ _CITATION_REQUIRED_TRIGGERS = [
 def _fallback_message(reason: str) -> str:
     if reason == LEGAL_ADVICE:
         return (
-            "I can't provide legal advice or recommend lawsuits. For legal "
-            f"questions, please consult an attorney. For claim guidance, "
-            f"contact your adjuster: {settings.adjuster_phone}."
+            "I can't provide legal advice or recommend lawsuits. "
+            "For legal questions, please consult an attorney."
         )
     if reason == FAULT_DETERMINATION:
         return (
             "Fault determination is made by your assigned adjuster after "
             "reviewing the police report, photos, and statements. I can help "
-            "with coverage details, repair estimates, and claim filing steps. "
-            f"Adjuster: {settings.adjuster_phone}."
+            "with coverage details, repair estimates, and claim filing steps."
         )
     if reason == MISSING_CITATION:
         return (
             "I don't have specific policy language on that in my documents. "
-            f"Please contact your RoadGuard adjuster at {settings.adjuster_phone} "
-            "for an official answer."
+            "Please try rephrasing your question or ask about a specific coverage topic."
         )
     if reason == FABRICATED_DATA:
         return (
@@ -80,8 +77,8 @@ def _fallback_message(reason: str) -> str:
             "can look up the correct figures."
         )
     return (
-        f"Please contact your RoadGuard adjuster at {settings.adjuster_phone} "
-        "for assistance."
+        "I can only help with auto insurance topics. "
+        "Please try rephrasing your question."
     )
 
 
@@ -108,7 +105,7 @@ def _check_citation_present(answer: str, citations: List[Citation]) -> Optional[
         "don't have specific policy",
         "don't have specific information",
         "contact your adjuster",
-        "please contact your roadguard",
+        "please contact your adjuster",
     ])
     if is_fallback:
         return None
@@ -151,7 +148,22 @@ def _check_fabricated_costs(
             return OutputDecision(blocked=True, reason=FABRICATED_DATA, message=_fallback_message(FABRICATED_DATA))
         return None
 
-    tolerance = settings.fabricated_cost_tolerance_pct / 100.0
+    # WHY: when citations are also present alongside CSV data, the LLM may
+    # legitimately quote dollar amounts from the retrieved PDF chunks (e.g.
+    # liability limits, coverage maximums). These won't be in allowed_dollar_values
+    # which only contains CSV-tool outputs. Blocking them is a false positive.
+    if citations:
+        return None
+
+    # WHY: also allow midpoints/averages between any two adjacent allowed values
+    # (e.g. low=$200, high=$400 -> midpoint=$300 is legitimate to quote).
+    expanded = list(allowed_dollar_values)
+    sorted_allowed = sorted(allowed_dollar_values)
+    for i in range(len(sorted_allowed) - 1):
+        expanded.append((sorted_allowed[i] + sorted_allowed[i + 1]) / 2.0)
+
+    # Use a wider tolerance (20%) since LLMs round and paraphrase numbers.
+    tolerance = max(settings.fabricated_cost_tolerance_pct / 100.0, 0.20)
     for match in _DOLLAR_RE.finditer(answer):
         try:
             value = float(match.group(1).replace(",", ""))
@@ -159,7 +171,11 @@ def _check_fabricated_costs(
             continue
         if value <= 0:
             continue
-        if not any(abs(value - allowed) <= max(tolerance * allowed, 1.0) for allowed in allowed_dollar_values):
+        # WHY: skip small values that are likely percentages or deductible
+        # fractions quoted without a dollar context (e.g. "80" in "80% of ACV").
+        if value <= 100:
+            continue
+        if not any(abs(value - allowed) <= max(tolerance * allowed, 10.0) for allowed in expanded):
             logger.warning(
                 "output_guardrail_fabricated_value",
                 value=value,

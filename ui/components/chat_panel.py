@@ -15,7 +15,8 @@ import streamlit as st
 
 from ui.components.citation_card import render_citations
 from ui.components.metrics_panel import render_metrics
-from ui.utils.api_client import chat_sync
+from ui.utils.api_client import stream_chat_sync
+from ui.components.right_panel import CATEGORIES as _RP_CATEGORIES
 
 # ── FAQ pool: (tabler_icon, category_label, question, context_mode) ───
 _FAQ_POOL = [
@@ -89,21 +90,25 @@ _INTENT_TO_CTX = {
 # we don't need to ask for more structured input — even if some optional
 # fields were missing. The popup should only nag when the answer actually
 # struggled (low confidence ⇒ tools failed to find rows / produce a number).
-_CONTEXT_POPUP_CONFIDENCE_FLOOR = 0.6
+_CONTEXT_POPUP_CONFIDENCE_FLOOR = 0.55
 
 
 def _decide_context_mode(intent: Optional[str], response: dict) -> Optional[str]:
     """Return a context-popup mode only when the agent NEEDS structured input.
 
     Rules:
-      - TOTAL_LOSS    + missing ACV or repair_cost + low confidence → "total_loss"
-      - REPAIR_ESTIMATE + missing vehicle_category + low confidence → "repair"
+      - TOTAL_LOSS    + missing ACV or repair_cost + low confidence + NO answer → "total_loss"
+      - REPAIR_ESTIMATE + missing vehicle_category + low confidence + NO answer → "repair"
       - everything else → None (no popup)
 
     The LLM's CLARIFICATION_NEEDED intent already handles vague queries that
     need a follow-up question, so we never auto-open the popup for those.
     """
     if not intent or intent not in _INTENT_TO_CTX:
+        return None
+
+    # If the agent already delivered a real answer, never interrupt with a form.
+    if response.get("has_answer"):
         return None
 
     # If the agent answered confidently, don't interrupt with a form.
@@ -410,12 +415,46 @@ def _send_message(user_input: str) -> None:
     st.session_state.messages.append({"role": "user", "content": user_input, "time": ts})
     _render_user_message({"content": user_input, "time": ts})
 
-    # Claude-style thinking bubble — overwritten when the API responds.
+    # Thinking bubble shown while tools/guardrails run (before first token).
     thinking_slot = st.empty()
     _render_thinking(thinking_slot, "Thinking…")
 
+    # State collected from SSE events.
+    meta: dict = {}
+    full_text: str = ""
+    done_data: dict = {}
+    guardrail_data: dict = {}
+    stream_slot = None  # placeholder for the streaming text area
+    _token_buf: int = 0
+    _RENDER_EVERY = 6  # re-render every N tokens to reduce Streamlit overhead
+
     try:
-        resp = chat_sync(_build_payload(user_input))
+        for event_type, data in stream_chat_sync(_build_payload(user_input)):
+            if event_type == "meta":
+                meta = data
+                # Swap thinking bubble for streaming text area.
+                thinking_slot.empty()
+                stream_slot = st.empty()
+
+            elif event_type == "token":
+                token = data if isinstance(data, str) else data
+                full_text += token
+                _token_buf += 1
+                if stream_slot is not None and _token_buf >= _RENDER_EVERY:
+                    _token_buf = 0
+                    stream_slot.markdown(
+                        f"<div class='rg-turn rg-turn-ai'>"
+                        f"<div class='rg-msg-ai'>\n\n{_escape_dollars(full_text)}\n\n</div>"
+                        "</div>",
+                        unsafe_allow_html=True,
+                    )
+
+            elif event_type == "guardrail":
+                guardrail_data = data if isinstance(data, dict) else {}
+
+            elif event_type == "done":
+                done_data = data if isinstance(data, dict) else {}
+
     except Exception as e:
         thinking_slot.empty()
         err = f"Connection error: {e}"
@@ -426,29 +465,47 @@ def _send_message(user_input: str) -> None:
         )
         return
 
-    # Clear thinking bubble before rendering the real answer.
+    # Clear streaming slot — we'll re-render cleanly via _render_assistant_message.
     thinking_slot.empty()
+    if stream_slot:
+        stream_slot.empty()
 
-    intent = resp.get("intent_detected")
-    # Decide whether to surface a context popup. Most intents don't need one —
-    # only TOTAL_LOSS / REPAIR_ESTIMATE with missing structured input, and only
-    # when the answer wasn't already grounded confidently.
-    st.session_state.context_mode = _decide_context_mode(intent, resp)
+    # Handle guardrail-blocked answer.
+    guardrail_reason = guardrail_data.get("reason") or meta.get("guardrail_reason")
+    if done_data.get("guardrail_triggered") or guardrail_reason:
+        final_content = guardrail_data.get("message") or full_text
+    else:
+        final_content = full_text or "(no answer)"
+
+    intent = meta.get("intent")
+    citations = meta.get("citations") or []
+    tools_used = meta.get("tools") or []
+    trace_id = meta.get("trace_id")
+    from observability.langsmith_tracer import build_trace_url
+    trace_url = build_trace_url(trace_id) if trace_id else None
 
     assistant_msg = {
         "role":                  "assistant",
-        "content":               resp.get("answer", "(no answer)"),
-        "citations":             resp.get("citations") or [],
-        "latency_ms":            resp.get("latency_ms", 0),
-        "tools_used":            resp.get("tools_used") or [],
+        "content":               final_content,
+        "citations":             citations,
+        "latency_ms":            done_data.get("latency_ms", 0),
+        "tools_used":            tools_used,
         "intent_detected":       intent,
-        "trace_url":             resp.get("trace_url"),
-        "guardrail_reason":      resp.get("guardrail_reason"),
-        "disclaimer":            resp.get("disclaimer"),
-        "calculation_breakdown": resp.get("calculation_breakdown"),
-        "confidence_score":      resp.get("confidence_score"),
+        "trace_url":             trace_url,
+        "guardrail_reason":      guardrail_reason,
+        "disclaimer":            done_data.get("disclaimer"),
+        "calculation_breakdown": done_data.get("calculation_breakdown"),
+        "confidence_score":      done_data.get("confidence_score"),
         "time":                  _now_str(),
     }
+
+    st.session_state.context_mode = _decide_context_mode(intent, {
+        "intent_detected": intent,
+        "confidence_score": done_data.get("confidence_score"),
+        "guardrail_triggered": bool(guardrail_reason),
+        # has_answer: True when the agent produced a real response — suppress popup.
+        "has_answer": bool(final_content and len(final_content.strip()) > 40),
+    })
     st.session_state.messages.append(assistant_msg)
     _render_assistant_message(assistant_msg, show_followups=True)
 
@@ -463,7 +520,7 @@ def _render_welcome() -> None:
           <div class="rg-welcome-badge"><i class="ti ti-sparkles"></i></div>
           <div class="rg-welcome-title">{greeting}</div>
           <div class="rg-welcome-sub">
-            I am RoadGuard AI Copilot, how can I help you today?
+            I am Auto Insurance AI Copilot, how can I help you today?
           </div>
           <div class="rg-feat-row">
             <span class="rg-feat-tag"><i class="ti ti-file-text"></i> Policy RAG</span>
@@ -504,8 +561,34 @@ def _render_welcome() -> None:
 
 def render_chat_panel() -> None:
     """Renders chat content only (no input bar)."""
+    # Immediately after New Session — suppress the welcome flash by rendering
+    # nothing on this first rerun, then rerun immediately so the welcome
+    # screen renders cleanly on the very next cycle.
+    if st.session_state.pop("_resetting", False):
+        st.rerun()
+
     msgs = st.session_state.messages
     pending = st.session_state.get("pending_faq")
+
+    # Right-panel card was clicked — show category suggestion chips.
+    rp_cat = st.session_state.get("rp_category")
+    if rp_cat is not None and not pending:
+        _icon, title, _sub, suggestions = _RP_CATEGORIES[rp_cat]
+        st.markdown(
+            f"<div class='rg-sugg-header'>"
+            f"<i class='ti {_icon}'></i> {title}"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+        for q in suggestions:
+            if st.button(q, key=f"rp_sugg_{rp_cat}_{q[:30]}", use_container_width=True):
+                del st.session_state["rp_category"]
+                st.session_state.pending_faq = q
+                st.rerun()
+        if st.button("✕ Dismiss", key="rp_sugg_dismiss"):
+            del st.session_state["rp_category"]
+            st.rerun()
+        return
 
     # Welcome screen only when truly idle.
     if not msgs and not pending:
@@ -533,6 +616,7 @@ def render_chat_panel() -> None:
 def render_chat_input() -> None:
     """Renders the chat input bar. Must be called OUTSIDE st.columns."""
     _render_context_popup()
+
     user_input = st.chat_input("Ask anything about your policy...")
     if user_input:
         # WHY rerun-via-pending_faq: render_chat_input runs AFTER render_chat_panel,
@@ -542,6 +626,6 @@ def render_chat_input() -> None:
         st.session_state.pending_faq = user_input
         st.rerun()
     st.markdown(
-        "<div class='rg-input-note'>RoadGuard AI Copilot can make mistakes. Verify important info.</div>",
+        "<div class='rg-input-note'>Auto Insurance AI Copilot can make mistakes. Verify important info.</div>",
         unsafe_allow_html=True,
     )

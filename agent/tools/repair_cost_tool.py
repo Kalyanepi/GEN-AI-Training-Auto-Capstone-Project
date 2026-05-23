@@ -48,14 +48,44 @@ _DAMAGE_STOPWORDS = {
     "damage", "damaged", "repair", "repaired", "fix", "fixed", "fixing",
     "broken", "cracked", "dented", "scratched", "scratch", "dent", "crack",
     "issue", "issues", "problem", "problems", "needs", "need",
+    # Deployment / filler words that add no part-identifying signal.
+    "deployed", "all", "went", "off", "triggered", "activated", "inflate", "inflated",
+}
+
+# WHY synonym map: users say "airbags" (plural) but the CSV labels use
+# "Airbag" (singular). Normalizing before key-token scoring prevents the
+# plural form from failing the Jaccard overlap check.
+_DAMAGE_SYNONYMS: dict[str, str] = {
+    "airbags": "airbag",
+    "bags": "bag",
+    "bumpers": "bumper",
+    "fenders": "fender",
+    "doors": "door",
+    "windows": "window",
+    "tires": "tire",
+    "wheels": "wheel",
+    "mirrors": "mirror",
+    "headlights": "headlight",
+    "taillights": "taillight",
+    # quantity / count synonyms
+    "both": "dual",
+    "two": "dual",
+    "double": "dual",
+    "one": "1",
+    "single": "1",
 }
 
 
 def _key_tokens(text: str) -> set:
-    """Lowercase content tokens minus stopwords. Strips punctuation."""
+    """Lowercase content tokens minus stopwords, with synonym normalization."""
     import re as _re
     raw = _re.findall(r"[a-z0-9]+", text.lower())
-    return {t for t in raw if t not in _DAMAGE_STOPWORDS and len(t) > 1}
+    result = set()
+    for t in raw:
+        if t in _DAMAGE_STOPWORDS or len(t) <= 1:
+            continue
+        result.add(_DAMAGE_SYNONYMS.get(t, t))
+    return result
 
 
 def _best_damage_match(query: str, choices: List[str], threshold: float) -> Optional[Tuple[str, float]]:
@@ -79,17 +109,23 @@ def _best_damage_match(query: str, choices: List[str], threshold: float) -> Opti
     for label in choices:
         ll = label.lower()
         score = SequenceMatcher(None, q, ll).ratio()
-        # Substring boost.
+        # Exact case-insensitive match — always wins.
+        if q == ll:
+            return (label, 1.0)
+        # Substring containment boost.
         if q in ll or ll in q:
-            score = max(score, 0.75)
+            score = max(score, 0.80)
         # Key-noun token overlap.
         l_tokens = _key_tokens(label)
         if q_tokens and l_tokens:
             shared = q_tokens & l_tokens
             if shared:
-                # A single shared part-noun usually means same row family.
                 jaccard = len(shared) / len(q_tokens | l_tokens)
-                score = max(score, max(0.70, jaccard))
+                # All label tokens matched = very strong signal.
+                if l_tokens.issubset(q_tokens):
+                    score = max(score, 0.85)
+                else:
+                    score = max(score, max(0.70, jaccard))
         if score > best[1]:
             best = (label, score)
     if best[0] is not None and best[1] >= threshold:

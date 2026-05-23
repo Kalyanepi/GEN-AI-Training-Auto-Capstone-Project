@@ -55,7 +55,13 @@ def rerank(query: str, chunks: List[ChunkResult], top_k: Optional[int] = None) -
         pairs = [(query, c.text) for c in chunks]
         scores = model.predict(pairs)
         ranked = sorted(zip(chunks, scores), key=lambda x: float(x[1]), reverse=True)
-        result = [c for c, _ in ranked][: top_k or settings.retrieval_top_k]
+        # WHY score cutoff: cross-encoder scores below -2.0 indicate the chunk
+        # is not meaningfully related to the query. Dropping them prevents
+        # off-topic chunks (e.g. rental PDF returned for a GAP question) from
+        # appearing in citations and confusing DeepEval contextual metrics.
+        _RERANK_CUTOFF = -2.0
+        filtered = [c for c, s in ranked if float(s) >= _RERANK_CUTOFF]
+        result = (filtered or [c for c, _ in ranked])[: top_k or settings.retrieval_top_k]
         logger.info("reranking_done", input=len(chunks), output=len(result))
         return result
     except Exception as e:

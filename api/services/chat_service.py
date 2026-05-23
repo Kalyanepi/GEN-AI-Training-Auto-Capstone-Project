@@ -30,7 +30,10 @@ class ChatService:
         # 1a. Extract structured params from the natural-language message
         # so users who type "ACV is $8,000 in Illinois" don't have to also
         # fill API/sidebar fields. Explicit request params still take precedence.
-        extracted = extract_params(request.message)
+        prior_ctx = self.session_service.store.get_context(request.session_id)
+        missing_acv = prior_ctx is None or prior_ctx.acv is None
+        missing_repair = prior_ctx is None or prior_ctx.repair_cost is None
+        extracted = extract_params(request.message, missing_acv=missing_acv, missing_repair=missing_repair)
 
         # 1b. Hydrate session context — request fields win over extraction.
         ctx = self.session_service.hydrate_context(
@@ -56,6 +59,7 @@ class ChatService:
             "vehicle_year": ctx.vehicle_year,
             "acv": ctx.acv,
             "repair_cost": ctx.repair_cost,
+            "last_intent": ctx.last_intent,
         }
 
         # 3. Invoke graph.

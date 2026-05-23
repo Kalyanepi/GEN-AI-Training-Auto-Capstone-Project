@@ -6,7 +6,8 @@
     "vehicle_category": "Mid-size Sedan",
     "coverage_type": "collision",
     "expected_keywords": ["bumper", "$"],
-    "expected_intent": "REPAIR_ESTIMATE"
+    "expected_intent": "REPAIR_ESTIMATE",
+    "expected_output": "Front bumper replacement on a Mid-size Sedan is estimated at approximately $800–$1,200, including parts and labor based on the RoadGuard repair cost reference table."
   },
   {
     "id": "rep-02",
@@ -15,7 +16,8 @@
     "vehicle_category": "Luxury SUV",
     "coverage_type": "collision",
     "expected_keywords": ["airbag", "OEM", "$"],
-    "expected_intent": "REPAIR_ESTIMATE"
+    "expected_intent": "REPAIR_ESTIMATE",
+    "expected_output": "Dual airbag deployment in a Luxury SUV typically costs $3,500–$5,500 for OEM airbag replacement including clock springs, seatbelt pretensioners, and SRS module reset."
   },
   {
     "id": "rep-03",
@@ -24,7 +26,8 @@
     "vehicle_category": "Compact SUV/Crossover",
     "coverage_type": "comprehensive",
     "expected_keywords": ["windshield", "$"],
-    "expected_intent": "REPAIR_ESTIMATE"
+    "expected_intent": "REPAIR_ESTIMATE",
+    "expected_output": "Windshield replacement on a Compact SUV/Crossover is estimated at $400–$700 depending on ADAS recalibration requirements. Under Premium Guard the glass deductible is waived."
   },
   {
     "id": "rep-04",
@@ -33,7 +36,8 @@
     "vehicle_category": "Economy/Compact",
     "coverage_type": "comprehensive",
     "expected_keywords": ["hail", "PDR", "$"],
-    "expected_intent": "REPAIR_ESTIMATE"
+    "expected_intent": "REPAIR_ESTIMATE",
+    "expected_output": "Full hail damage repair on an Economy/Compact car using Paintless Dent Repair (PDR) is estimated at $1,200–$2,500 depending on dent count and severity."
   },
   {
     "id": "rep-05",
@@ -42,7 +46,8 @@
     "vehicle_category": "Full-size SUV/Truck",
     "coverage_type": "collision",
     "expected_keywords": ["engine", "$"],
-    "expected_intent": "REPAIR_ESTIMATE"
+    "expected_intent": "REPAIR_ESTIMATE",
+    "expected_output": "Engine damage repair on a Full-size SUV/Truck is estimated at $4,000–$9,000 for partial engine rebuild; a full engine replacement can reach $10,000–$14,000 depending on engine type and labor."
   },
   {
     "id": "rep-06",
@@ -51,6 +56,7 @@
     "vehicle_category": "Mid-size Sedan",
     "coverage_type": "collision",
     "expected_keywords": ["frame", "structural", "$"],
-    "expected_intent": "REPAIR_ESTIMATE"
+    "expected_intent": "REPAIR_ESTIMATE",
+    "expected_output": "Major structural frame straightening on a Mid-size Sedan is estimated at $2,500–$4,500. If damage exceeds structural repair feasibility thresholds, the vehicle may be declared a total loss."
   }
 ]

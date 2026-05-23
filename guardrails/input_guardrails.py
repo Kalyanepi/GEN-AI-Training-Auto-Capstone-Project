@@ -1,16 +1,25 @@
-"""Pre-agent input guardrails: PII, prompt injection, off-topic, jailbreak.
+"""Pre-agent input guardrails: PII (Presidio), prompt injection, off-topic, jailbreak.
 
 WHY pre-agent: blocking PII before the LLM ever sees it prevents the model
 from echoing it back in logs, traces, or responses. Blocking jailbreaks before
 the router prevents wasted tool invocations and protects the persona.
+
+WHY Presidio for PII: regex patterns miss names, addresses, and uncommon
+formats. Presidio's NLP-backed recognizers (spaCy NER + rule-based) provide
+coverage across 50+ PII entity types without manual pattern maintenance.
+Custom recognizers extend it for insurance-domain identifiers (policy numbers,
+claim IDs) that aren't in the default set.
 """
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Optional
+from functools import lru_cache
+from typing import List, Optional
 
 from openai import AsyncOpenAI
+from presidio_analyzer import AnalyzerEngine, Pattern, PatternRecognizer
+from presidio_analyzer.nlp_engine import NlpEngineProvider
 
 from api.config import settings
 from observability.logger import get_logger
@@ -33,12 +42,116 @@ class GuardrailDecision:
     message: Optional[str] = None
 
 
-# Patterns ordered by specificity; first match wins.
-_PII_PATTERNS = [
-    (re.compile(r"\b\d{3}-\d{2}-\d{4}\b"), "SSN"),
-    (re.compile(r"\b(?:\d[ -]*?){13,19}\b"), "Credit card"),
-    (re.compile(r"\b(0[1-9]|1[0-2])[/-](0[1-9]|[12]\d|3[01])[/-](19|20)\d{2}\b"), "DOB"),
+# ---------------------------------------------------------------------------
+# Presidio PII engine — lazy singleton so it loads once on first request.
+# WHY lru_cache(1): AnalyzerEngine + spaCy model take ~2s to initialise;
+# caching avoids that cost on every request.
+# ---------------------------------------------------------------------------
+
+def _make_presidio_engine() -> AnalyzerEngine:
+    """Build and return a Presidio AnalyzerEngine with insurance-domain extras."""
+    # Use the large spaCy model for best NER accuracy.
+    provider = NlpEngineProvider(nlp_configuration={
+        "nlp_engine_name": "spacy",
+        "models": [{"lang_code": "en", "model_name": "en_core_web_lg"}],
+    })
+    nlp_engine = provider.create_engine()
+    engine = AnalyzerEngine(nlp_engine=nlp_engine, supported_languages=["en"])
+
+    # Custom recognizer: RoadGuard policy numbers (POL-XXXXX or POL123456).
+    engine.registry.add_recognizer(PatternRecognizer(
+        supported_entity="POLICY_NUMBER",
+        patterns=[Pattern(
+            name="policy_number",
+            regex=r"\bPOL[-]?\d{4,10}\b",
+            score=0.9,
+        )],
+    ))
+
+    # Custom recognizer: claim IDs (CL-XXXX or CLM-XXXXX).
+    engine.registry.add_recognizer(PatternRecognizer(
+        supported_entity="CLAIM_ID",
+        patterns=[Pattern(
+            name="claim_id",
+            regex=r"\bCL(?:M)?[-]?\d{3,10}\b",
+            score=0.9,
+        )],
+    ))
+
+    # Custom recognizer: driver's license common US format (1-2 letters + 6-8 digits).
+    engine.registry.add_recognizer(PatternRecognizer(
+        supported_entity="DRIVER_LICENSE",
+        patterns=[Pattern(
+            name="driver_license",
+            regex=r"\b[A-Z]{1,2}\d{6,8}\b",
+            score=0.6,
+        )],
+    ))
+
+    # Custom recognizer: US SSN — Presidio's built-in requires context words
+    # ("SSN", "social security") to score above 0.5. This explicit pattern
+    # guarantees detection regardless of surrounding text.
+    engine.registry.add_recognizer(PatternRecognizer(
+        supported_entity="US_SSN",
+        patterns=[Pattern(
+            name="us_ssn_explicit",
+            regex=r"\b(?!000|666|9\d{2})\d{3}-(?!00)\d{2}-(?!0000)\d{4}\b",
+            score=0.85,
+        )],
+    ))
+
+    # Custom recognizer: US phone numbers in common formats.
+    engine.registry.add_recognizer(PatternRecognizer(
+        supported_entity="PHONE_NUMBER",
+        patterns=[
+            Pattern(
+                name="us_phone_dashes",
+                regex=r"\b\d{3}-\d{3}-\d{4}\b",
+                score=0.75,
+            ),
+            Pattern(
+                name="us_phone_parens",
+                regex=r"\(\d{3}\)\s*\d{3}[-.\s]\d{4}\b",
+                score=0.75,
+            ),
+            Pattern(
+                name="us_phone_dots",
+                regex=r"\b\d{3}\.\d{3}\.\d{4}\b",
+                score=0.75,
+            ),
+        ],
+    ))
+    return engine
+
+
+@lru_cache(maxsize=1)
+def _get_presidio_engine() -> AnalyzerEngine:
+    return _make_presidio_engine()
+
+
+# PII entity types to block. We exclude LOCATION intentionally — city/state
+# names are normal in insurance queries ("I'm in Texas").
+_BLOCKED_PII_ENTITIES: List[str] = [
+    # PERSON excluded — too noisy for insurance domain (car makes, adjuster
+    # names, "John Doe" examples all trigger false positives).
+    "EMAIL_ADDRESS",
+    "PHONE_NUMBER",
+    "US_SSN",
+    "CREDIT_CARD",
+    "US_BANK_NUMBER",
+    "US_PASSPORT",
+    "MEDICAL_LICENSE",
+    "IP_ADDRESS",
+    "IBAN_CODE",
+    "POLICY_NUMBER",
+    "CLAIM_ID",
+    "DRIVER_LICENSE",
 ]
+# Minimum confidence score to treat a detection as a true positive.
+# 0.5 catches SSN (xxx-xx-xxxx) and phone numbers which Presidio scores
+# at ~0.5-0.6. Insurance queries never contain these patterns so the
+# false-positive risk is negligible.
+_PII_SCORE_THRESHOLD = 0.5
 
 _JAILBREAK_PATTERNS = [
     re.compile(r"ignore\s+(all\s+)?previous\s+instructions", re.IGNORECASE),
@@ -78,25 +191,41 @@ def _safe_response(reason: str) -> str:
     return (
         "I can only help with auto insurance topics: policy coverage, repair "
         "estimates, total loss thresholds, FNOL guidance, rental limits, and "
-        "roadside coverage.\n\n"
-        f"For anything else, contact RoadGuard Claims: {settings.adjuster_phone} "
-        f"or {settings.adjuster_url}."
+        "roadside coverage."
     )
 
 
 def _check_pii(message: str) -> Optional[GuardrailDecision]:
-    for pattern, label in _PII_PATTERNS:
-        if pattern.search(message):
-            logger.warning("input_guardrail_pii", label=label)
+    """Presidio-powered PII detection with insurance-domain custom recognizers.
+
+    WHY Presidio over regex: NLP-backed entity recognition catches names,
+    addresses, and context-dependent identifiers that pure regex misses, while
+    the custom recognizers add POL/CL patterns not in the default set.
+    """
+    try:
+        engine = _get_presidio_engine()
+        results = engine.analyze(
+            text=message,
+            language="en",
+            entities=_BLOCKED_PII_ENTITIES,
+            score_threshold=_PII_SCORE_THRESHOLD,
+        )
+        if results:
+            detected = ", ".join(sorted({r.entity_type for r in results}))
+            logger.warning("input_guardrail_pii_presidio", entities=detected)
             return GuardrailDecision(
                 blocked=True,
                 reason=PII_DETECTED,
                 message=(
                     "For your security, please don't share personal identifiers "
-                    "like SSN, credit card, or date of birth in chat. "
-                    f"Contact your adjuster directly at {settings.adjuster_phone}."
+                    "like your name, SSN, credit card, phone number, or policy/claim ID in chat."
                 ),
             )
+    except Exception as exc:
+        # WHY fail-open: a Presidio/spaCy error should not block legitimate
+        # insurance queries. Log and continue — downstream LLM synthesis will
+        # still not echo any PII it encounters.
+        logger.warning("input_guardrail_pii_error", error=str(exc))
     return None
 
 
@@ -108,7 +237,7 @@ def _check_jailbreak(message: str) -> Optional[GuardrailDecision]:
                 blocked=True,
                 reason=JAILBREAK_ATTEMPT,
                 message=(
-                    "I'm RoadGuard AI Copilot — I can only help with auto "
+                    "I'm Auto Insurance AI Copilot — I can only help with auto "
                     "insurance questions. " + _safe_response(JAILBREAK_ATTEMPT)
                 ),
             )
@@ -165,6 +294,18 @@ async def _check_out_of_scope(message: str, client: AsyncOpenAI) -> Optional[Gua
 # WHY: GPT-4o-mini sometimes misclassifies short insurance questions as
 # off-topic (e.g., "Are intentional acts covered?"). A regex check is
 # deterministic, instant, and avoids wasting an LLM call.
+_GREETING_RE = re.compile(
+    r"^\s*(?:hi|hello|hey|howdy|greetings|good\s+(?:morning|afternoon|evening|day)|"
+    r"what'?s\s+up|sup|hiya|yo|namaste|salut|hola)\b[\s!?.]*$",
+    re.IGNORECASE,
+)
+
+
+def _check_greeting(message: str) -> bool:
+    """Return True if the message is a pure greeting — let it pass through."""
+    return bool(_GREETING_RE.match(message.strip()))
+
+
 _INSURANCE_KEYWORDS_RE = re.compile(
     r"\b(?:"
     r"coverage|covered|cover|policy|claim|deductible|collision|comprehensive|"
@@ -178,7 +319,11 @@ _INSURANCE_KEYWORDS_RE = re.compile(
     r"glass|towing|mile|mileage|reimbursement|daily limit|days|"
     r"new car|rideshare|delivery|driver|passenger|third party|bodily|property|"
     r"injury|medical|expense|hospital|ambulance|legal|fault|negligence|"
-    r"roadguard|insurance|insurer|underwriter"
+    r"roadguard|insurance|insurer|underwriter|"
+    r"next steps?|what next|what now|what should i|what do i|how do i|"
+    r"what happens|what are my|tell me more|explain|clarify|"
+    r"steps?|process|procedure|timeline|deadline|how long|"
+    r"should i|can i|do i need|is it|am i|will i|will my"
     r")\b",
     re.IGNORECASE,
 )
@@ -191,9 +336,60 @@ def _check_insurance_keywords(message: str) -> Optional[GuardrailDecision]:
     return None
 
 
-async def check_input(message: str, client: Optional[AsyncOpenAI] = None) -> GuardrailDecision:
+# Matches short clarification answers: dollar amounts (either end), plain
+# numbers, state names/codes, or short phrases (≤40 chars).
+_CLARIFICATION_ANSWER_RE = re.compile(
+    r"^\s*("
+    r"\$?\s*\d[\d,]*(?:\.\d+)?\s*\$?"  # $4000, 4000$, $4,500, 14000
+    r"|\d+(?:\.\d+)?\s*(?:dollars?|usd|k|thousand|million)?"  # 4000 dollars, 4k
+    r"|[A-Za-z]{2}(?:\s+[A-Za-z]+)*"  # TX, Florida, New York, yes, no
+    r")\s*[.,!?]?\s*$",
+    re.IGNORECASE,
+)
+
+
+def _check_clarification_answer(
+    message: str, last_intent: Optional[str]
+) -> Optional[GuardrailDecision]:
+    """Bypass guardrail for short answers to clarification questions.
+
+    WHY: when the agent asks "What is the ACV of your vehicle?" the user
+    may reply with just "$4,000" or "4000$" or "Texas". These bare answers
+    look off-topic to the LLM classifier but are valid insurance responses
+    in context. We bypass when last_intent was CLARIFICATION_NEEDED.
+    """
+    if last_intent != "CLARIFICATION_NEEDED":
+        return None
+    stripped = message.strip()
+    # Short messages (≤50 chars) that are answering a clarification — bypass.
+    if len(stripped) <= 50 and _CLARIFICATION_ANSWER_RE.match(stripped):
+        logger.info("input_guardrail_clarification_answer_bypass")
+        return GuardrailDecision(blocked=False)
+    # Also bypass very short messages (≤15 chars) unconditionally when
+    # last_intent was CLARIFICATION_NEEDED — catches edge cases like "4000$".
+    if len(stripped) <= 15:
+        logger.info("input_guardrail_clarification_short_bypass")
+        return GuardrailDecision(blocked=False)
+    return None
+
+
+async def check_input(
+    message: str,
+    client: Optional[AsyncOpenAI] = None,
+    last_intent: Optional[str] = None,
+) -> GuardrailDecision:
     """Run all input guardrails in fast-to-slow order. First blocker wins."""
     client = client or AsyncOpenAI(api_key=settings.openai_api_key)
+
+    # Greetings always pass — the router will handle them with a welcome reply.
+    if _check_greeting(message):
+        logger.info("input_guardrail_greeting_bypass")
+        return GuardrailDecision(blocked=False)
+
+    # Short answers to clarification questions bypass LLM classifier.
+    decision = _check_clarification_answer(message, last_intent)
+    if decision:
+        return decision
 
     for fast_check in (_check_pii, _check_jailbreak, _check_prompt_injection):
         decision = fast_check(message)

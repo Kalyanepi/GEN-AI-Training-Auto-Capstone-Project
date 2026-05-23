@@ -9,7 +9,8 @@
     "expected_is_total_loss": true,
     "expected_threshold_pct": 75,
     "expected_keywords": ["total loss", "75%", "81"],
-    "expected_intent": "TOTAL_LOSS"
+    "expected_intent": "TOTAL_LOSS",
+    "expected_output": "Yes, this is a total loss. Illinois uses a 75% threshold. Your repair cost of $6,500 is 81.25% of the ACV of $8,000, which exceeds the 75% threshold. The vehicle will be declared a total loss and you will receive the ACV minus your deductible."
   },
   {
     "id": "tl-02",
@@ -21,7 +22,8 @@
     "expected_is_total_loss": false,
     "expected_threshold_pct": 100,
     "expected_keywords": ["not", "total loss", "100%", "actual"],
-    "expected_intent": "TOTAL_LOSS"
+    "expected_intent": "TOTAL_LOSS",
+    "expected_output": "No, this is not a total loss in Texas. Texas uses a 100% threshold — repair costs must equal or exceed the full ACV. Your repair estimate of $11,000 is 91.7% of the $12,000 ACV, which is below the 100% threshold, so the vehicle will be repaired."
   },
   {
     "id": "tl-03",
@@ -33,7 +35,8 @@
     "expected_is_total_loss": false,
     "expected_threshold_pct": 80,
     "expected_keywords": ["not", "76", "80%"],
-    "expected_intent": "TOTAL_LOSS"
+    "expected_intent": "TOTAL_LOSS",
+    "expected_output": "No, this is not a total loss in Florida. Florida's threshold is 80%. Your repair cost of $3,800 is 76% of the $5,000 ACV, which is below the 80% threshold, so the vehicle will be repaired."
   },
   {
     "id": "tl-04",
@@ -45,7 +48,8 @@
     "expected_is_total_loss": false,
     "expected_threshold_pct": 110,
     "expected_keywords": ["not", "110%", "combined"],
-    "expected_intent": "TOTAL_LOSS"
+    "expected_intent": "TOTAL_LOSS",
+    "expected_output": "No, this is not a total loss in Pennsylvania. Pennsylvania uses a combined value threshold of 110% of ACV. Your repair estimate of $10,500 is 105% of the $10,000 ACV, which is below the 110% combined threshold, so the vehicle will be repaired."
   },
   {
     "id": "tl-05",
@@ -57,6 +61,7 @@
     "expected_is_total_loss": true,
     "expected_threshold_pct": 75,
     "expected_keywords": ["total loss", "80", "75%"],
-    "expected_intent": "TOTAL_LOSS"
+    "expected_intent": "TOTAL_LOSS",
+    "expected_output": "Yes, this is a total loss in California. California's threshold is 75%. Your repair cost of $12,000 is 80% of the $15,000 ACV, which exceeds the 75% threshold. The vehicle will be declared a total loss and you will receive the ACV."
   }
 ]

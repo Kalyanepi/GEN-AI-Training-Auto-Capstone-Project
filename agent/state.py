@@ -49,5 +49,6 @@ class AgentState(TypedDict, total=False):
 
     # --- Memory + observability ---
     conversation_history: List[Dict[str, str]]   # [{role, content}, ...]
+    last_intent: Optional[str]   # intent from previous turn (for guardrail context)
     trace_id: Optional[str]
     latency_ms: Optional[int]

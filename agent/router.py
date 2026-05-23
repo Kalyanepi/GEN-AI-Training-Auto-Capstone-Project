@@ -32,7 +32,7 @@ _router_cache: LRUCache[str, "RouterDecision"] = LRUCache(
 VALID_INTENTS = {
     "COVERAGE_QA", "REPAIR_ESTIMATE", "TOTAL_LOSS", "FNOL_GUIDANCE",
     "RENTAL_LOOKUP", "ROADSIDE", "UM_UIM", "MULTI_INTENT",
-    "CLARIFICATION_NEEDED", "OUT_OF_SCOPE",
+    "CLARIFICATION_NEEDED", "GREETING", "OUT_OF_SCOPE",
 }
 
 VALID_TOOLS = {
@@ -54,25 +54,44 @@ class IntentRouter:
         self.client = client or AsyncOpenAI(api_key=settings.openai_api_key)
         self.model = settings.openai_router_model
 
-    async def classify(self, user_message: str) -> RouterDecision:
+    async def classify(
+        self,
+        user_message: str,
+        conversation_history: Optional[List[dict]] = None,
+    ) -> RouterDecision:
         """Classify intent. Falls back to COVERAGE_QA + policy_rag_tool on error.
 
         WHY this fallback: COVERAGE_QA + RAG is the safest default — it grounds
         in retrieved chunks and never fabricates. Better than refusing to answer.
+
+        WHY conversation_history: bare clarification answers like "4000$" or
+        "Texas" look off-topic in isolation. Providing the last assistant
+        message (the clarification question) gives the router context to
+        correctly classify the answer as a TOTAL_LOSS follow-up.
         """
-        cache_key = normalize_text(user_message)
-        cached = _router_cache.get(cache_key)
-        if cached is not None:
-            logger.info("router_cache_hit", intent=cached.intent, tools=cached.tools)
-            return cached
+        # Only cache context-free messages — context-dependent answers must
+        # always be re-evaluated with their conversation history.
+        has_history = bool(conversation_history)
+        cache_key = normalize_text(user_message) if not has_history else None
+        if cache_key:
+            cached = _router_cache.get(cache_key)
+            if cached is not None:
+                logger.info("router_cache_hit", intent=cached.intent, tools=cached.tools)
+                return cached
+
+        # Build message list: system + up to last 2 history turns + current user msg.
+        messages: List[dict] = [{"role": "system", "content": ROUTER_SYSTEM_PROMPT}]
+        if has_history:
+            # Include only the last assistant message for context (keeps prompt short).
+            recent = [m for m in (conversation_history or []) if m.get("role") == "assistant"]
+            if recent:
+                messages.append({"role": "assistant", "content": recent[-1]["content"]})
+        messages.append({"role": "user", "content": user_message})
 
         try:
             resp = await self.client.chat.completions.create(
                 model=self.model,
-                messages=[
-                    {"role": "system", "content": ROUTER_SYSTEM_PROMPT},
-                    {"role": "user", "content": user_message},
-                ],
+                messages=messages,
                 temperature=0.0,
                 response_format={"type": "json_object"},
                 max_tokens=300,
@@ -90,7 +109,7 @@ class IntentRouter:
             tools = [t for t in tools if t in VALID_TOOLS]
 
             # Terminal intents must not invoke tools.
-            if intent in {"OUT_OF_SCOPE", "CLARIFICATION_NEEDED"}:
+            if intent in {"OUT_OF_SCOPE", "CLARIFICATION_NEEDED", "GREETING"}:
                 tools = []
             elif not tools:
                 # Always provide at least one grounded tool for non-terminal queries.
@@ -111,7 +130,8 @@ class IntentRouter:
                 clarification_question=clarification,
             )
             logger.info("router_decision", intent=intent, tools=tools, reasoning=reasoning)
-            _router_cache.set(cache_key, decision)
+            if cache_key:
+                _router_cache.set(cache_key, decision)
             return decision
         except Exception as e:
             logger.error("router_failed_fallback", error=str(e), exc_info=True)

@@ -1,6 +1,6 @@
-"""RoadGuard AI Copilot — Streamlit entry point (v3 UI).
+"""Auto Insurance AI Copilot — Streamlit entry point (v3 UI).
 
-Professional design system with a neon-glow RoadGuard logo as the brand
+Professional design system with a neon-glow brand logo as the
 signature. Backend wiring (FastAPI /api/v1/chat contract) is unchanged.
 """
 from __future__ import annotations
@@ -17,10 +17,22 @@ from ui.components.right_panel import render_right_panel, handle_rp_query_param
 
 # ── Page config ───────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="RoadGuard AI Copilot",
+    page_title="Auto Insurance AI Copilot",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded",
+)
+
+# Inject nav-hiding CSS as the very first render call so the multipage
+# nav links never flash before the full design system CSS loads.
+st.markdown(
+    "<style>"
+    "[data-testid='stSidebarNav']{display:none!important}"
+    "[data-testid='stSidebarCollapseButton']{display:none!important}"
+    "[data-testid='collapsedControl']{display:none!important}"
+    "#MainMenu,footer,.stDeployButton{display:none!important}"
+    "</style>",
+    unsafe_allow_html=True,
 )
 
 init_session_state()
@@ -39,6 +51,8 @@ if _dark:
       --msg-ai:#111a30; --input-bg:#111a30;
       --shadow:0 18px 45px rgba(0,0,0,.45);
       --neon-strength:.9;
+      --nav-bg:rgba(11,18,32,.92);
+      --bottom-bg:rgba(11,18,32,.97);
     """
 else:
     _THEME_VARS = """
@@ -51,6 +65,8 @@ else:
       --msg-ai:#ffffff; --input-bg:#ffffff;
       --shadow:0 18px 45px rgba(18,34,62,.10);
       --neon-strength:.55;
+      --nav-bg:rgba(248,250,252,.92);
+      --bottom-bg:rgba(248,250,252,.97);
     """
 
 # ── Neon RoadGuard mark (SVG glow filter + brand gradient) ────────────
@@ -91,7 +107,7 @@ _api_html = (
     "<span class='rg-avatar-dot err-dot'></span>"
 )
 
-_theme_icon  = "☀" if _dark else "🌙"
+_theme_icon  = "ti-sun" if _dark else "ti-moon"
 _theme_label = "Light mode" if _dark else "Dark mode"
 _next_theme  = "light" if _dark else "dark"
 
@@ -120,6 +136,8 @@ header[data-testid="stHeader"], [data-testid="stDecoration"],
 [data-testid="stStatusWidget"], [data-testid="stToolbar"],
 #MainMenu, footer, .stDeployButton {{ display:none !important; }}
 [data-testid="stSidebarCollapseButton"], [data-testid="collapsedControl"] {{ display:none !important; }}
+/* hide auto-generated multipage nav links */
+[data-testid="stSidebarNav"] {{ display:none !important; }}
 
 /* base */
 .stApp, .stApp > .main, [data-testid="stAppViewContainer"] {{ background:var(--bg) !important; }}
@@ -138,14 +156,15 @@ body, .stMarkdown, p, div, span, label, input, textarea, button {{
 [data-testid="stSidebar"] > div:first-child {{
   background:transparent !important;
   border-right:1px solid rgba(255,255,255,.08) !important; padding-top:92px !important;
-  overflow:hidden !important;
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
 }}
 section.main > div.block-container {{ padding:calc(var(--nav-h) + 20px) 44px 72px 44px !important; }}
 
 /* ───────────────────────── TOP NAV ───────────────────────── */
 .rg-topnav {{
   position:fixed; top:0; left:0; right:0; height:var(--nav-h);
-  background:rgba(255,255,255,.88);
+  background:var(--nav-bg, rgba(248,250,252,.92));
   backdrop-filter:saturate(140%) blur(14px);
   border-bottom:1px solid var(--border);
   display:flex; align-items:center; z-index:9999;
@@ -269,7 +288,9 @@ section.main > div.block-container {{ padding:calc(var(--nav-h) + 20px) 44px 72p
 .rg-recent-icon {{ font-size:14px; color:var(--sidebar-muted); flex-shrink:0; }}
 .rg-recent-text {{ font-size:13px; color:var(--sidebar-text); line-height:1.35; font-weight:600; }}
 .rg-recent-list {{
-  max-height:calc(100vh - 430px); overflow-y:auto; padding-right:4px; margin-bottom:14px;
+  max-height:calc(100vh - 480px); min-height:60px; overflow-y:auto;
+  overflow-x:hidden; padding-right:4px; margin-bottom:14px;
+  scrollbar-width:thin;
 }}
 .rg-recent-empty {{
   border:1px dashed rgba(255,255,255,.14); border-radius:10px; padding:14px;
@@ -540,6 +561,23 @@ section.main > div.block-container {{ padding:calc(var(--nav-h) + 20px) 44px 72p
 .rg-rp-chev {{ font-size:14px; color:var(--text-3); flex-shrink:0; }}
 [data-testid="column"]:last-of-type {{ border-left:1px solid var(--border); padding-left:18px !important; padding-top:6px !important; }}
 
+/* ───────────────────────── SUGGESTION CHIPS ───────────────────────── */
+.rg-sugg-header {{
+  font-size:14px; font-weight:700; color:var(--text); margin-bottom:14px;
+  display:flex; align-items:center; gap:8px;
+}}
+.rg-sugg-header i {{ color:var(--accent); font-size:16px; }}
+[data-testid="stButton"] button[kind="secondary"] {{
+  background:var(--surface) !important; border:1px solid var(--border2) !important;
+  color:var(--text) !important; border-radius:10px !important;
+  font-size:13px !important; text-align:left !important;
+  padding:12px 16px !important; transition:all var(--trans);
+}}
+[data-testid="stButton"] button[kind="secondary"]:hover {{
+  border-color:rgba(109,93,252,.4) !important; background:var(--surface2) !important;
+  color:var(--accent) !important;
+}}
+
 /* ───────────────────────── CHAT INPUT ───────────────────────── */
 [data-testid="stChatInput"] textarea {{
   background:var(--input-bg) !important; border:1px solid var(--border2) !important;
@@ -557,7 +595,7 @@ section.main > div.block-container {{ padding:calc(var(--nav-h) + 20px) 44px 72p
   box-shadow:0 2px 12px rgba(109,93,252,calc(var(--neon-strength) * .6)) !important;
 }}
 [data-testid="stBottom"], [data-testid="stBottom"] > div, [data-testid="stBottomBlockContainer"] {{
-  background:rgba(248,250,252,.96) !important; border-top:0 !important; padding:8px 18px 16px !important;
+  background:var(--bottom-bg, rgba(248,250,252,.96)) !important; border-top:0 !important; padding:8px 18px 16px !important;
 }}
 [data-testid="stMain"], section[data-testid="stMain"] > div {{ background:var(--bg) !important; }}
 .rg-input-note {{
@@ -567,13 +605,17 @@ section.main > div.block-container {{ padding:calc(var(--nav-h) + 20px) 44px 72p
 </style>""", unsafe_allow_html=True)
 
 # ── Top-nav HTML ──────────────────────────────────────────────────────
+# WHY split topnav: the theme toggle must be a real Streamlit button so it
+# updates session_state in-place without URL navigation or opening a new tab.
+# We render the left/center nav as HTML, then inject the Streamlit button
+# into the nav-right slot via a fixed-position CSS container.
 st.markdown(f"""
 <div class="rg-topnav">
   <div class="rg-nav-brand">
     {_LOGO_SVG}
       <div class="rg-brand-text">
-      <div class="rg-brand-name">RoadGuard AI</div>
-      <div class="rg-brand-sub">Auto Insurance Copilot</div>
+      <div class="rg-brand-name">Auto Insurance</div>
+      <div class="rg-brand-sub">AI Copilot</div>
     </div>
   </div>
   <div class="rg-nav-center">
@@ -583,19 +625,45 @@ st.markdown(f"""
     <span class="rg-nav-tag"><i class="ti ti-shield-lock"></i>Never Fabricated</span>
   </div>
   <div class="rg-nav-right">
-    <details class="rg-settings-wrap">
-      <summary class="rg-settings-btn"><i class="ti ti-settings"></i></summary>
-      <div class="rg-dropdown">
-        <div class="rg-dd-hdr">Preferences</div>
-        <a class="rg-dd-item" href="?ui_theme={_next_theme}"><span>{_theme_icon}</span> {_theme_label}</a>
-        <div class="rg-dd-hdr">About</div>
-        <div class="rg-dd-item"><span>🛡️</span> RoadGuard v3.0</div>
-      </div>
-    </details>
     <div class="rg-avatar">AM{_api_html}</div>
   </div>
 </div>
 """, unsafe_allow_html=True)
+
+# Theme toggle — icon-only circular button fixed to top-right of nav bar.
+_theme_emoji = "☀️" if _dark else "🌙"
+st.markdown("""
+<style>
+div[data-testid="stButton"].rg-theme-btn > button {
+  position: fixed;
+  top: 15px;
+  right: 24px;
+  z-index: 10001;
+  width: 38px; height: 38px;
+  background: transparent;
+  border: 1px solid var(--border2, rgba(255,255,255,.18));
+  border-radius: 50%;
+  font-size: 17px;
+  padding: 0;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .18s, border-color .18s, box-shadow .18s;
+  line-height: 1;
+}
+div[data-testid="stButton"].rg-theme-btn > button:hover {
+  background: rgba(109,93,252,.18);
+  border-color: rgba(109,93,252,.5);
+  box-shadow: 0 0 12px rgba(109,93,252,.3);
+}
+</style>
+""", unsafe_allow_html=True)
+
+with st.container():
+    st.markdown('<div class="rg-theme-btn">', unsafe_allow_html=True)
+    if st.button(_theme_emoji, key="theme_toggle_btn", help=_theme_label):
+        st.session_state.ui_theme = _next_theme
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ── Query params ──────────────────────────────────────────────────────
 _qp = st.query_params.to_dict()

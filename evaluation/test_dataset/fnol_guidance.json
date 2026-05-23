@@ -4,34 +4,39 @@
     "question": "I just had a fender-bender. How do I file a claim?",
     "policy_tier": "premium",
     "expected_keywords": ["file", "claim", "FNOL", "step"],
-    "expected_intent": "FNOL_GUIDANCE"
+    "expected_intent": "FNOL_GUIDANCE",
+    "expected_output": "To file a First Notice of Loss (FNOL): (1) Ensure safety and move to a safe location. (2) Exchange insurance and contact information with the other driver. (3) Document the scene with photos. (4) Call RoadGuard at 1-800-555-0601 or file online at roadguardauto.com/claims within 24 hours. (5) An adjuster will contact you to assess the damage and begin the claims process."
   },
   {
     "id": "fnol-02",
     "question": "I was hit and run. What do I do and what's the deadline?",
     "policy_tier": "premium",
     "expected_keywords": ["hit and run", "72", "uninsured", "police"],
-    "expected_intent": "FNOL_GUIDANCE"
+    "expected_intent": "FNOL_GUIDANCE",
+    "expected_output": "For a hit-and-run: (1) File a police report immediately — this is required for an Uninsured Motorist (UM) claim. (2) Document the scene with photos and note any witness information. (3) Report the claim to RoadGuard within 72 hours. Your Uninsured Motorist coverage will apply since the at-fault driver is unknown."
   },
   {
     "id": "fnol-03",
     "question": "My car was stolen overnight. What's the process?",
     "policy_tier": "elite",
     "expected_keywords": ["theft", "police report", "24"],
-    "expected_intent": "FNOL_GUIDANCE"
+    "expected_intent": "FNOL_GUIDANCE",
+    "expected_output": "For a vehicle theft: (1) File a police report immediately and obtain the report number. (2) Notify RoadGuard within 24 hours — comprehensive coverage applies to theft. (3) Provide the police report number, vehicle details, and any supporting documentation. (4) An adjuster will process your claim; a rental vehicle may be available under your Comprehensive Elite benefits while the claim is investigated."
   },
   {
     "id": "fnol-04",
     "question": "Hail damaged my car. What do I need to file?",
     "policy_tier": "premium",
     "expected_keywords": ["hail", "comprehensive", "photos"],
-    "expected_intent": "FNOL_GUIDANCE"
+    "expected_intent": "FNOL_GUIDANCE",
+    "expected_output": "Hail damage is covered under comprehensive coverage. To file: (1) Take photos of all hail damage from multiple angles. (2) Do not attempt repairs before the adjuster inspection. (3) Report the claim to RoadGuard at 1-800-555-0601 or online. (4) An adjuster will schedule a PDR (Paintless Dent Repair) assessment."
   },
   {
     "id": "fnol-05",
     "question": "I damaged someone else's property in a parking lot. How do I report it?",
     "policy_tier": "standard",
     "expected_keywords": ["liability", "third party", "report"],
-    "expected_intent": "FNOL_GUIDANCE"
+    "expected_intent": "FNOL_GUIDANCE",
+    "expected_output": "Property damage to a third party is covered under your liability coverage. Steps: (1) Leave your contact and insurance information for the other party. (2) Document the damage with photos. (3) Report the incident to RoadGuard within 24 hours — your adjuster will contact the third party and manage the liability claim on your behalf."
   }
 ]

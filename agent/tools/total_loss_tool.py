@@ -74,20 +74,20 @@ class TotalLossTool(BaseTool):
 
     async def _execute(
         self,
-        acv: float,
-        repair_cost: float,
         state_code: str,
+        acv: Optional[float] = None,
+        repair_cost: Optional[float] = None,
         vehicle_year: Optional[int] = None,
         policy_tier: Optional[str] = None,
         coverage_type: Optional[str] = "collision",
+        deductible_override: Optional[float] = None,
         **_: Any,
     ) -> ToolResult:
-        if acv is None or acv <= 0:
-            raise DataNotFoundError("ACV must be a positive number")
-        if repair_cost is None or repair_cost < 0:
-            raise DataNotFoundError("Repair cost must be non-negative")
         if not state_code:
             raise DataNotFoundError("state_code is required")
+
+        # Threshold-lookup mode: no ACV/repair provided — just return state thresholds.
+        lookup_only = (acv is None or acv <= 0) and (repair_cost is None or repair_cost <= 0)
 
         df = _get_df()
         state_code = state_code.strip().upper()
@@ -104,6 +104,45 @@ class TotalLossTool(BaseTool):
         age_category = str(row["vehicle_age_category"])
         settlement_basis = str(row["roadguard_settlement_basis"])
         notes = str(row["notes"]) if pd.notna(row["notes"]) else ""
+        special_rule = _SPECIAL_RULES.get(state_code)
+
+        if lookup_only:
+            # Threshold-lookup mode: return all age-bucket rows for the state.
+            all_rows = []
+            for _, r in state_rows.iterrows():
+                all_rows.append({
+                    "age_category": str(r["vehicle_age_category"]),
+                    "threshold_pct": float(r["total_loss_threshold_pct"]),
+                    "salvage_pct": float(r["salvage_value_typical_pct_acv"]),
+                    "notes": str(r["notes"]) if pd.notna(r["notes"]) else "",
+                })
+            excerpt = (
+                f"{state_name}: total loss threshold {threshold_pct:.0f}% of ACV. "
+                f"Salvage ~{salvage_pct:.0f}% ACV. Settlement basis: {settlement_basis}."
+            )
+            citation = csv_citation(
+                csv_filename="TotalLoss_Threshold_Table.csv",
+                row_descriptor=f"{state_name} thresholds",
+                excerpt=excerpt,
+                relevance_score=1.0,
+            )
+            return ToolResult(
+                tool_name=self.name,
+                success=True,
+                data={
+                    "lookup_only": True,
+                    "state_code": state_code,
+                    "state_name": state_name,
+                    "threshold_pct": threshold_pct,
+                    "salvage_pct": salvage_pct,
+                    "settlement_basis": settlement_basis,
+                    "special_rule": special_rule,
+                    "notes": notes,
+                    "all_age_buckets": all_rows,
+                },
+                citations=[citation],
+                dollar_values=[],
+            )
 
         repair_ratio_pct = (repair_cost / acv) * 100.0
         threshold_amount = acv * (threshold_pct / 100.0)
@@ -112,10 +151,16 @@ class TotalLossTool(BaseTool):
 
         salvage_value = acv * (salvage_pct / 100.0)
 
-        # Apply tier deductible to settlement when total loss declared.
-        deductible = 0
-        if policy_tier and coverage_type:
-            deductible = _TIER_DEDUCTIBLES.get(policy_tier.lower(), {}).get(coverage_type.lower(), 0)
+        # Apply deductible to settlement when total loss declared.
+        # WHY override: if the user explicitly states their deductible in the
+        # query, that takes precedence over the tier default — their actual
+        # policy may differ from the tier standard.
+        if deductible_override is not None and deductible_override >= 0:
+            deductible = float(deductible_override)
+        elif policy_tier and coverage_type:
+            deductible = float(_TIER_DEDUCTIBLES.get(policy_tier.lower(), {}).get(coverage_type.lower(), 0))
+        else:
+            deductible = 0.0
         settlement_amount = max(0.0, acv - deductible) if is_total_loss else 0.0
 
         breakdown_lines = [
@@ -126,11 +171,11 @@ class TotalLossTool(BaseTool):
             f"Margin to threshold = ${marginal_amount:,.0f} ({'below' if marginal_amount > 0 else 'at/above'} threshold)",
             f"Salvage value (~{salvage_pct:.0f}% of ACV) = ${salvage_value:,.0f}",
         ]
+        deductible_source = "user-provided" if deductible_override is not None and deductible_override >= 0 else "tier default"
         if is_total_loss:
             breakdown_lines.append(
-                f"Settlement = ACV - deductible = ${acv:,.0f} - ${deductible:,.0f} = ${settlement_amount:,.0f}"
+                f"Settlement = ACV - deductible ({deductible_source}) = ${acv:,.0f} - ${deductible:,.0f} = ${settlement_amount:,.0f}"
             )
-        special_rule = _SPECIAL_RULES.get(state_code)
         if special_rule:
             breakdown_lines.append(f"Special rule: {special_rule}")
 

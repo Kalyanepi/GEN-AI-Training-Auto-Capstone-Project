@@ -74,17 +74,102 @@ def _find_state_code(text: str) -> Optional[str]:
     return None
 
 
-def extract_params(message: str) -> ExtractedParams:
-    """Best-effort extraction of acv / repair_cost / state_code from chat text."""
+def extract_all_state_codes(text: str) -> list[str]:
+    """Return ALL state codes found in the message, in order of appearance.
+
+    WHY: multi-state comparison queries like "Florida vs Texas" contain two
+    states. Returning only the first one causes the second to be silently
+    dropped. This lets the orchestrator invoke total_loss_tool once per state.
+    """
+    if not text:
+        return []
+    valid_codes = set(_STATE_NAMES.values())
+    found: list[str] = []
+    seen: set[str] = set()
+
+    # Build a list of (position, code) for all matches, then sort by position.
+    hits: list[tuple[int, str]] = []
+
+    # Two-letter uppercase codes.
+    for m in re.finditer(r"\b([A-Z]{2})\b", text):
+        code = m.group(1)
+        if code in valid_codes and code not in seen:
+            hits.append((m.start(), code))
+            seen.add(code)
+
+    # Full state names (longer names checked first to avoid partial matches).
+    lower = text.lower()
+    for name in sorted(_STATE_NAMES.keys(), key=len, reverse=True):
+        m = re.search(rf"\b{re.escape(name)}\b", lower)
+        if m:
+            code = _STATE_NAMES[name]
+            if code not in seen:
+                hits.append((m.start(), code))
+                seen.add(code)
+
+    hits.sort(key=lambda x: x[0])
+    found = [code for _, code in hits]
+    return found
+
+
+_BARE_NUMBER_RE = re.compile(
+    r"^\s*\$?\s*(\d[\d,]*(?:\.\d+)?)\s*\$?\s*(?:dollars?|usd|k|thousand)?\s*[.,!?]?\s*$",
+    re.IGNORECASE,
+)
+
+
+def extract_bare_number(message: str) -> Optional[float]:
+    """Extract a bare dollar amount from a short clarification answer.
+
+    WHY: when the agent asks "What is the ACV?" and the user replies "4000"
+    or "4000$" or "$4,000", _find_dollar_near won't match because there's no
+    keyword nearby. This handles the bare-number case.
+    Returns None if the message has more content than just a number.
+    """
+    m = _BARE_NUMBER_RE.match(message.strip())
+    if not m:
+        return None
+    try:
+        raw = m.group(1).replace(",", "")
+        val = float(raw)
+        # Handle "k" suffix: "4k" → 4000
+        if re.search(r"k\b", message, re.IGNORECASE) and val < 1000:
+            val *= 1000
+        return val if val > 0 else None
+    except ValueError:
+        return None
+
+
+def extract_params(message: str, missing_acv: bool = False, missing_repair: bool = False) -> ExtractedParams:
+    """Best-effort extraction of acv / repair_cost / state_code from chat text.
+
+    WHY missing_acv / missing_repair: when the agent just asked for a specific
+    value, a bare-number reply ("4000", "4000$") should be assigned to that
+    field even without a keyword nearby.
+    """
     if not message:
         return ExtractedParams()
-    acv = _find_dollar_near(message, ["acv", "actual cash value", "value"], window=40)
+    acv = _find_dollar_near(message, ["acv", "actual cash value", "value"], window=60)
     repair = _find_dollar_near(
         message,
-        ["repair", "estimate", "fix", "fixing", "damage estimate", "repair cost"],
-        window=40,
+        ["repair", "repairs", "estimate", "fix", "fixing", "damage", "damage estimate", "repair cost", "costs", "needs"],
+        window=60,
     )
     state = _find_state_code(message)
+
+    # If neither keyword-based extraction found anything and there's a bare number,
+    # assign it to whichever field is missing.
+    if acv is None and repair is None:
+        bare = extract_bare_number(message)
+        if bare is not None:
+            if missing_acv and not missing_repair:
+                acv = bare
+            elif missing_repair and not missing_acv:
+                repair = bare
+            elif missing_acv:
+                # Both missing — can't determine which; leave for router to ask
+                acv = bare
+
     return ExtractedParams(acv=acv, repair_cost=repair, state_code=state)
 
 

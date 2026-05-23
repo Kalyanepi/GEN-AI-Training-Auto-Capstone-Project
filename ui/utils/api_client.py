@@ -1,8 +1,9 @@
 """Async HTTP client wrapping the FastAPI backend."""
 from __future__ import annotations
 
+import json
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Generator, Optional, Tuple
 
 import httpx
 
@@ -54,11 +55,44 @@ def chat_sync(payload: Dict[str, Any]) -> Dict[str, Any]:
 def clear_session_sync(session_id: str) -> bool:
     base = get_api_base_url().rstrip("/")
     try:
-        with httpx.Client(timeout=10.0) as client:
+        with httpx.Client(timeout=3.0) as client:
             resp = client.delete(f"{base}/api/v1/session/{session_id}")
             return resp.status_code == 200
-    except httpx.HTTPError:
+    except Exception:
         return False
+
+
+def stream_chat_sync(
+    payload: Dict[str, Any],
+) -> Generator[Tuple[str, Any], None, None]:
+    """Consume the SSE /chat/stream endpoint and yield (event_type, data) tuples.
+
+    Yields:
+      ("meta",     dict)  — intent/tools/citations, emitted before tokens
+      ("token",    str)   — incremental text chunk for st.write_stream()
+      ("guardrail",dict)  — if output guardrail blocks the answer
+      ("done",     dict)  — latency/confidence/disclaimer
+    """
+    base = get_api_base_url().rstrip("/")
+    with httpx.Client(timeout=120.0) as client:
+        with client.stream("POST", f"{base}/api/v1/chat/stream", json=payload) as resp:
+            resp.raise_for_status()
+            event_type = "message"
+            for raw_line in resp.iter_lines():
+                line = raw_line.strip()
+                if line.startswith("event:"):
+                    event_type = line[len("event:"):].strip()
+                elif line.startswith("data:"):
+                    data_str = line[len("data:"):].strip()
+                    try:
+                        data = json.loads(data_str)
+                    except json.JSONDecodeError:
+                        data = data_str
+                    if event_type == "token":
+                        yield ("token", data.get("token", "") if isinstance(data, dict) else data)
+                    else:
+                        yield (event_type, data)
+                    event_type = "message"
 
 
 def health_sync() -> Dict[str, Any]:

@@ -4,69 +4,79 @@
     "question": "What's the difference between collision and comprehensive coverage?",
     "policy_tier": "premium",
     "expected_keywords": ["collision", "comprehensive", "impact", "theft"],
-    "expected_intent": "COVERAGE_QA"
+    "expected_intent": "COVERAGE_QA",
+    "expected_output": "Collision coverage pays for damage to your vehicle resulting from a collision with another car or object, regardless of fault. Comprehensive coverage pays for damage caused by events other than a collision, such as theft, fire, hail, flood, or animal strikes."
   },
   {
     "id": "cov-02",
     "question": "Is wear and tear covered under my policy?",
     "policy_tier": "premium",
     "expected_keywords": ["wear", "exclusion", "not covered"],
-    "expected_intent": "COVERAGE_QA"
+    "expected_intent": "COVERAGE_QA",
+    "expected_output": "No. Wear and tear is explicitly excluded from all RoadGuard policy tiers. The policy covers sudden accidental damage, not gradual deterioration from normal use."
   },
   {
     "id": "cov-03",
     "question": "Do I have GAP coverage on my Standard Shield plan?",
     "policy_tier": "standard",
     "expected_keywords": ["gap", "add-on", "$8"],
-    "expected_intent": "COVERAGE_QA"
+    "expected_intent": "COVERAGE_QA",
+    "expected_output": "GAP coverage is not included by default on the Standard Shield plan. It is available as an optional add-on for approximately $8 per month."
   },
   {
     "id": "cov-04",
     "question": "Is GAP included in Premium Guard?",
     "policy_tier": "premium",
     "expected_keywords": ["gap", "included", "60 months"],
-    "expected_intent": "COVERAGE_QA"
+    "expected_intent": "COVERAGE_QA",
+    "expected_output": "Yes, GAP coverage is included in the Premium Guard plan at no extra cost for the first 60 months of the loan or lease term."
   },
   {
     "id": "cov-05",
     "question": "What is my MedPay limit on Comprehensive Elite?",
     "policy_tier": "elite",
     "expected_keywords": ["medpay", "$25,000", "25000"],
-    "expected_intent": "COVERAGE_QA"
+    "expected_intent": "COVERAGE_QA",
+    "expected_output": "The Medical Payments (MedPay) limit on the Comprehensive Elite plan is $25,000 per person per accident, covering medical expenses regardless of fault."
   },
   {
     "id": "cov-06",
     "question": "Can I stack UM coverage across multiple vehicles?",
     "policy_tier": "premium",
     "expected_keywords": ["stack", "uninsured", "um"],
-    "expected_intent": "UM_UIM"
+    "expected_intent": "UM_UIM",
+    "expected_output": "Stacking of Uninsured Motorist (UM) coverage across multiple vehicles depends on your state law and policy endorsements. Under Premium Guard, inter-policy stacking may be permitted in states that allow it. Please confirm with your adjuster for your specific state."
   },
   {
     "id": "cov-07",
     "question": "What are the bodily injury liability limits on Standard Shield?",
     "policy_tier": "standard",
     "expected_keywords": ["50", "100", "bodily injury", "liability"],
-    "expected_intent": "COVERAGE_QA"
+    "expected_intent": "COVERAGE_QA",
+    "expected_output": "The Standard Shield plan provides bodily injury liability limits of $50,000 per person and $100,000 per accident."
   },
   {
     "id": "cov-08",
     "question": "Is the glass deductible waived under Premium Guard?",
     "policy_tier": "premium",
     "expected_keywords": ["glass", "waiver", "yes"],
-    "expected_intent": "COVERAGE_QA"
+    "expected_intent": "COVERAGE_QA",
+    "expected_output": "Yes, the glass deductible is waived under the Premium Guard plan. Windshield and glass repair or replacement claims do not require you to pay a deductible."
   },
   {
     "id": "cov-09",
     "question": "Are intentional acts covered?",
     "policy_tier": "premium",
     "expected_keywords": ["intentional", "exclusion", "not covered"],
-    "expected_intent": "COVERAGE_QA"
+    "expected_intent": "COVERAGE_QA",
+    "expected_output": "No. Intentional acts are explicitly excluded under all RoadGuard policy tiers. Damage caused deliberately by the policyholder is not covered by collision, comprehensive, or liability coverage."
   },
   {
     "id": "cov-10",
     "question": "What is New Car Replacement and which tiers include it?",
     "policy_tier": "elite",
     "expected_keywords": ["new car replacement", "elite", "2 years"],
-    "expected_intent": "COVERAGE_QA"
+    "expected_intent": "COVERAGE_QA",
+    "expected_output": "New Car Replacement means that if your vehicle is declared a total loss within the first 2 years or 24,000 miles, your insurer will pay the cost of a brand-new replacement vehicle of the same make and model rather than the depreciated ACV. This benefit is available on the Comprehensive Elite tier only."
   }
 ]

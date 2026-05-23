@@ -1,0 +1,752 @@
+{
+  "summary": {
+    "total": 30,
+    "intent_accuracy": 0.833,
+    "avg_keyword_score": 0.834,
+    "responses_with_citations": 29,
+    "avg_latency_ms": 2007.9,
+    "deepeval": {
+      "total_evaluated": 0,
+      "passed": 0,
+      "failed": 0,
+      "pass_rate": 0.0,
+      "avg_scores_per_metric": {}
+    }
+  },
+  "results": [
+    {
+      "id": "cov-01",
+      "intent_match": true,
+      "intent_expected": "COVERAGE_QA",
+      "intent_actual": "COVERAGE_QA",
+      "keywords_expected": [
+        "collision",
+        "comprehensive",
+        "impact",
+        "theft"
+      ],
+      "keywords_matched": [
+        "collision",
+        "comprehensive",
+        "impact",
+        "theft"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 4,
+      "guardrail_triggered": false,
+      "latency_ms": 1867,
+      "answer_preview": "Collision coverage pays for damage to your vehicle resulting from a collision, such as hitting another car or a stationary object, regardless of fault. Comprehensive coverage, on the other hand, cover",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "cov-02",
+      "intent_match": true,
+      "intent_expected": "COVERAGE_QA",
+      "intent_actual": "COVERAGE_QA",
+      "keywords_expected": [
+        "wear",
+        "exclusion",
+        "not covered"
+      ],
+      "keywords_matched": [
+        "wear",
+        "exclusion",
+        "not covered"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 4,
+      "guardrail_triggered": false,
+      "latency_ms": 1312,
+      "answer_preview": "Wear and tear is not covered under your policy. Both comprehensive and collision coverages explicitly exclude wear and tear.\n\n- Comprehensive Exclusions: Wear and tear is not covered (FullAutoPolicy_R",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "cov-03",
+      "intent_match": true,
+      "intent_expected": "COVERAGE_QA",
+      "intent_actual": "COVERAGE_QA",
+      "keywords_expected": [
+        "gap",
+        "add-on",
+        "$8"
+      ],
+      "keywords_matched": [
+        "gap",
+        "add-on",
+        "$8"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 4,
+      "guardrail_triggered": false,
+      "latency_ms": 1942,
+      "answer_preview": "You do not have GAP coverage included in your Standard Shield plan. It is available as a paid add-on for $8 per term.\n\n- GAP coverage is not included in the Standard Shield plan (FullAutoPolicy_RoadGu",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "cov-04",
+      "intent_match": true,
+      "intent_expected": "COVERAGE_QA",
+      "intent_actual": "COVERAGE_QA",
+      "keywords_expected": [
+        "gap",
+        "included",
+        "60 months"
+      ],
+      "keywords_matched": [
+        "gap",
+        "included",
+        "60 months"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 4,
+      "guardrail_triggered": false,
+      "latency_ms": 2146,
+      "answer_preview": "Yes, GAP coverage is included in the Premium Guard plan for loan terms up to 60 months.\n\n- GAP coverage pays the difference between your vehicle's Actual Cash Value (ACV) and your outstanding loan or ",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "cov-05",
+      "intent_match": true,
+      "intent_expected": "COVERAGE_QA",
+      "intent_actual": "COVERAGE_QA",
+      "keywords_expected": [
+        "medpay",
+        "$25,000",
+        "25000"
+      ],
+      "keywords_matched": [
+        "medpay",
+        "$25,000"
+      ],
+      "keyword_score": 0.67,
+      "citations_count": 4,
+      "guardrail_triggered": false,
+      "latency_ms": 1287,
+      "answer_preview": "Your MedPay limit on the Comprehensive Elite plan is $25,000 per person.\n\n- This information is found in the coverage summary of your policy declarations (DeclarationPage_ELITE_RoadGuard.pdf p.1).",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "cov-06",
+      "intent_match": false,
+      "intent_expected": "UM_UIM",
+      "intent_actual": "COVERAGE_QA",
+      "keywords_expected": [
+        "stack",
+        "uninsured",
+        "um"
+      ],
+      "keywords_matched": [
+        "stack",
+        "uninsured",
+        "um"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 4,
+      "guardrail_triggered": false,
+      "latency_ms": 2155,
+      "answer_preview": "Yes, you can stack Uninsured Motorist (UM) coverage across multiple vehicles on your policy. Illinois law permits intra-policy stacking of UM limits unless your policy contains an anti-stacking endors",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "cov-07",
+      "intent_match": true,
+      "intent_expected": "COVERAGE_QA",
+      "intent_actual": "COVERAGE_QA",
+      "keywords_expected": [
+        "50",
+        "100",
+        "bodily injury",
+        "liability"
+      ],
+      "keywords_matched": [
+        "50",
+        "100",
+        "bodily injury",
+        "liability"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 4,
+      "guardrail_triggered": false,
+      "latency_ms": 1881,
+      "answer_preview": "The bodily injury liability limits on the Standard Shield plan are $50,000 per person and $100,000 per occurrence.\n\n- These limits are specified in the coverage summary for the Standard Shield plan (D",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "cov-08",
+      "intent_match": true,
+      "intent_expected": "COVERAGE_QA",
+      "intent_actual": "COVERAGE_QA",
+      "keywords_expected": [
+        "glass",
+        "waiver",
+        "yes"
+      ],
+      "keywords_matched": [
+        "glass",
+        "yes"
+      ],
+      "keyword_score": 0.67,
+      "citations_count": 4,
+      "guardrail_triggered": false,
+      "latency_ms": 1453,
+      "answer_preview": "Yes, the glass deductible is waived for glass-only claims under the Premium Guard plan.\n\n- The policy document states that the deductible may be waived for glass-only claims on Premium Guard plans (Fu",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "cov-09",
+      "intent_match": true,
+      "intent_expected": "COVERAGE_QA",
+      "intent_actual": "COVERAGE_QA",
+      "keywords_expected": [
+        "intentional",
+        "exclusion",
+        "not covered"
+      ],
+      "keywords_matched": [
+        "intentional",
+        "exclusion",
+        "not covered"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 4,
+      "guardrail_triggered": false,
+      "latency_ms": 1085,
+      "answer_preview": "Intentional acts are not covered under your policy. This exclusion applies to all policy tiers, including Premium.\n\n- General Policy Exclusions state that losses arising from intentional acts by any i",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "cov-10",
+      "intent_match": true,
+      "intent_expected": "COVERAGE_QA",
+      "intent_actual": "COVERAGE_QA",
+      "keywords_expected": [
+        "new car replacement",
+        "elite",
+        "2 years"
+      ],
+      "keywords_matched": [
+        "new car replacement",
+        "elite",
+        "2 years"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 4,
+      "guardrail_triggered": false,
+      "latency_ms": 1814,
+      "answer_preview": "New Car Replacement is a coverage add-on that pays for a brand-new replacement vehicle of the same make and model if your vehicle, typically 2 years old or less, is totaled. This coverage is included ",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "rep-01",
+      "intent_match": true,
+      "intent_expected": "REPAIR_ESTIMATE",
+      "intent_actual": "REPAIR_ESTIMATE",
+      "keywords_expected": [
+        "bumper",
+        "$"
+      ],
+      "keywords_matched": [
+        "bumper",
+        "$"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 2,
+      "guardrail_triggered": false,
+      "latency_ms": 1489,
+      "answer_preview": "The cost to replace the front bumper on a Mid-size Sedan under your Premium collision coverage is between $300 and $1,700 after applying your deductible.\n\n- **Repair Cost Range:** $800 to $2,200\n- **D",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "rep-02",
+      "intent_match": true,
+      "intent_expected": "REPAIR_ESTIMATE",
+      "intent_actual": "REPAIR_ESTIMATE",
+      "keywords_expected": [
+        "airbag",
+        "oem",
+        "$"
+      ],
+      "keywords_matched": [
+        "airbag"
+      ],
+      "keyword_score": 0.33,
+      "citations_count": 1,
+      "guardrail_triggered": false,
+      "latency_ms": 1344,
+      "answer_preview": "I don't have specific repair cost information for airbag deployment in a Luxury SUV in my documents. Please contact your RoadGuard adjuster at 1-800-555-0601 for an official estimate.",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "rep-03",
+      "intent_match": true,
+      "intent_expected": "REPAIR_ESTIMATE",
+      "intent_actual": "REPAIR_ESTIMATE",
+      "keywords_expected": [
+        "windshield",
+        "$"
+      ],
+      "keywords_matched": [
+        "windshield",
+        "$"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 3,
+      "guardrail_triggered": false,
+      "latency_ms": 1758,
+      "answer_preview": "The average net cost for windshield replacement on a Compact SUV under a Premium comprehensive policy is $250 after applying the deductible.\n\n- Repair cost range: $200 to $800\n- Average repair cost: $",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "rep-04",
+      "intent_match": true,
+      "intent_expected": "REPAIR_ESTIMATE",
+      "intent_actual": "REPAIR_ESTIMATE",
+      "keywords_expected": [
+        "hail",
+        "pdr",
+        "$"
+      ],
+      "keywords_matched": [
+        "hail",
+        "$"
+      ],
+      "keyword_score": 0.67,
+      "citations_count": 4,
+      "guardrail_triggered": false,
+      "latency_ms": 2072,
+      "answer_preview": "I'm sorry to hear about the hail damage to your car. For a full hail damage repair on an Economy/Compact car under a Standard tier comprehensive policy, the repair costs range from $1,700 to $6,800. A",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "rep-05",
+      "intent_match": true,
+      "intent_expected": "REPAIR_ESTIMATE",
+      "intent_actual": "REPAIR_ESTIMATE",
+      "keywords_expected": [
+        "engine",
+        "$"
+      ],
+      "keywords_matched": [
+        "engine",
+        "$"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 5,
+      "guardrail_triggered": false,
+      "latency_ms": 1865,
+      "answer_preview": "The average repair cost for engine damage on a Full-size SUV/Truck under a collision coverage policy is $10,000 after applying your $500 deductible.\n\n- **Repair Cost Range**: $4,200 to $16,800\n- **Ave",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "rep-06",
+      "intent_match": true,
+      "intent_expected": "REPAIR_ESTIMATE",
+      "intent_actual": "REPAIR_ESTIMATE",
+      "keywords_expected": [
+        "frame",
+        "structural",
+        "$"
+      ],
+      "keywords_matched": [
+        "frame",
+        "$"
+      ],
+      "keyword_score": 0.67,
+      "citations_count": 1,
+      "guardrail_triggered": false,
+      "latency_ms": 2487,
+      "answer_preview": "I'm sorry to hear about your accident. For a Mid-size Sedan requiring minor frame straightening under a Premium policy, the average repair cost is $1,000. After applying your deductible, the net cost ",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "tl-01",
+      "intent_match": true,
+      "intent_expected": "TOTAL_LOSS",
+      "intent_actual": "TOTAL_LOSS",
+      "keywords_expected": [
+        "total loss",
+        "75%",
+        "81"
+      ],
+      "keywords_matched": [
+        "total loss",
+        "75%",
+        "81"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 5,
+      "guardrail_triggered": false,
+      "latency_ms": 2324,
+      "answer_preview": "I'm sorry to hear about your accident. Based on the information provided, your vehicle will be declared a total loss.\n\n- **Repair Ratio**: The repair cost is $6,500, which is 81.25% of the ACV ($8,000",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "tl-02",
+      "intent_match": true,
+      "intent_expected": "TOTAL_LOSS",
+      "intent_actual": "TOTAL_LOSS",
+      "keywords_expected": [
+        "not",
+        "total loss",
+        "100%",
+        "actual"
+      ],
+      "keywords_matched": [
+        "not",
+        "total loss",
+        "100%",
+        "actual"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 5,
+      "guardrail_triggered": false,
+      "latency_ms": 2237,
+      "answer_preview": "I'm sorry to hear about your accident. Based on the information provided, your vehicle is not considered a total loss in Texas. The repair cost of $11,000 is 91.67% of the actual cash value (ACV) of $",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "tl-03",
+      "intent_match": true,
+      "intent_expected": "TOTAL_LOSS",
+      "intent_actual": "TOTAL_LOSS",
+      "keywords_expected": [
+        "not",
+        "76",
+        "80%"
+      ],
+      "keywords_matched": [
+        "not",
+        "76",
+        "80%"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 5,
+      "guardrail_triggered": false,
+      "latency_ms": 2091,
+      "answer_preview": "I'm sorry to hear about your accident. Based on the information provided, your vehicle is not considered a total loss. In Florida, the total loss threshold is 80% of the Actual Cash Value (ACV). Your ",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "tl-04",
+      "intent_match": true,
+      "intent_expected": "TOTAL_LOSS",
+      "intent_actual": "TOTAL_LOSS",
+      "keywords_expected": [
+        "not",
+        "110%",
+        "combined"
+      ],
+      "keywords_matched": [
+        "not",
+        "110%",
+        "combined"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 5,
+      "guardrail_triggered": false,
+      "latency_ms": 2048,
+      "answer_preview": "I'm sorry to hear about your accident. Based on the information provided, your vehicle is not considered a total loss in Pennsylvania. The repair cost of $10,500 is 105% of the actual cash value (ACV)",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "tl-05",
+      "intent_match": true,
+      "intent_expected": "TOTAL_LOSS",
+      "intent_actual": "TOTAL_LOSS",
+      "keywords_expected": [
+        "total loss",
+        "80",
+        "75%"
+      ],
+      "keywords_matched": [
+        "total loss",
+        "80",
+        "75%"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 5,
+      "guardrail_triggered": false,
+      "latency_ms": 2314,
+      "answer_preview": "I'm sorry to hear about your accident. Based on the information provided, your vehicle is considered a total loss. This is because the repair cost of $12,000 exceeds 75% of the actual cash value (ACV)",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "fnol-01",
+      "intent_match": true,
+      "intent_expected": "FNOL_GUIDANCE",
+      "intent_actual": "FNOL_GUIDANCE",
+      "keywords_expected": [
+        "file",
+        "claim",
+        "fnol",
+        "step"
+      ],
+      "keywords_matched": [
+        "file",
+        "claim",
+        "fnol",
+        "step"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 4,
+      "guardrail_triggered": false,
+      "latency_ms": 3224,
+      "answer_preview": "I'm sorry to hear about your accident. To file a claim for your fender-bender, follow these steps:\n\n- **File FNOL Promptly**: Report the First Notice of Loss (FNOL) within 24 hours of the incident for",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "fnol-02",
+      "intent_match": false,
+      "intent_expected": "FNOL_GUIDANCE",
+      "intent_actual": "MULTI_INTENT",
+      "keywords_expected": [
+        "hit and run",
+        "72",
+        "uninsured",
+        "police"
+      ],
+      "keywords_matched": [
+        "72",
+        "police"
+      ],
+      "keyword_score": 0.5,
+      "citations_count": 8,
+      "guardrail_triggered": false,
+      "latency_ms": 2603,
+      "answer_preview": "I'm sorry to hear about your hit-and-run incident. You should file a First Notice of Loss (FNOL) with RoadGuard within 72 hours of the incident. Additionally, a police report must be filed within 24 h",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "fnol-03",
+      "intent_match": true,
+      "intent_expected": "FNOL_GUIDANCE",
+      "intent_actual": "FNOL_GUIDANCE",
+      "keywords_expected": [
+        "theft",
+        "police report",
+        "24"
+      ],
+      "keywords_matched": [
+        "theft",
+        "police report",
+        "24"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 4,
+      "guardrail_triggered": false,
+      "latency_ms": 2825,
+      "answer_preview": "I'm sorry to hear about your car being stolen. Here's the process for filing a First Notice of Loss (FNOL) for a stolen vehicle:\n\n- **File a Police Report:** You must file a police report within 24 ho",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "fnol-04",
+      "intent_match": true,
+      "intent_expected": "FNOL_GUIDANCE",
+      "intent_actual": "FNOL_GUIDANCE",
+      "keywords_expected": [
+        "hail",
+        "comprehensive",
+        "photos"
+      ],
+      "keywords_matched": [
+        "hail",
+        "photos"
+      ],
+      "keyword_score": 0.67,
+      "citations_count": 4,
+      "guardrail_triggered": false,
+      "latency_ms": 1931,
+      "answer_preview": "I'm sorry to hear about the hail damage to your car. To file a First Notice of Loss (FNOL) for weather-related damage like hail, you'll need to provide several documents and details:\n\n- **Completed an",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "fnol-05",
+      "intent_match": true,
+      "intent_expected": "FNOL_GUIDANCE",
+      "intent_actual": "FNOL_GUIDANCE",
+      "keywords_expected": [
+        "liability",
+        "third party",
+        "report"
+      ],
+      "keywords_matched": [
+        "report"
+      ],
+      "keyword_score": 0.33,
+      "citations_count": 4,
+      "guardrail_triggered": false,
+      "latency_ms": 3275,
+      "answer_preview": "I'm sorry to hear about your incident. To report the damage to someone else's property, you need to file a First Notice of Loss (FNOL) with RoadGuard. Here's how you can proceed:\n\n- **File FNOL Prompt",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "ra-01",
+      "intent_match": true,
+      "intent_expected": "RENTAL_LOOKUP",
+      "intent_actual": "RENTAL_LOOKUP",
+      "keywords_expected": [
+        "$50",
+        "30 days",
+        "rental"
+      ],
+      "keywords_matched": [
+        "$50",
+        "30 days",
+        "rental"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 6,
+      "guardrail_triggered": false,
+      "latency_ms": 3065,
+      "answer_preview": "Your rental car limit under the Premium Guard plan is $50 per day, with a maximum of 30 days, and a total benefit cap of $1,500.\n\n- **Daily rental allowance:** $50 per day\n- **Maximum rental days:** 3",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "ra-02",
+      "intent_match": false,
+      "intent_expected": "ROADSIDE",
+      "intent_actual": "COVERAGE_QA",
+      "keywords_expected": [
+        "lockout",
+        "unlimited"
+      ],
+      "keywords_matched": [
+        "lockout",
+        "unlimited"
+      ],
+      "keyword_score": 1.0,
+      "citations_count": 4,
+      "guardrail_triggered": false,
+      "latency_ms": 2960,
+      "answer_preview": "You have unlimited lockout services per policy term with the Comprehensive Elite plan.\n\n- Comprehensive Elite plan includes unlimited lockout services (RoadsideAssistance_Towing_RoadGuard.pdf p.1).",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "ra-03",
+      "intent_match": false,
+      "intent_expected": "ROADSIDE",
+      "intent_actual": "CLARIFICATION_NEEDED",
+      "keywords_expected": [
+        "2",
+        "tow",
+        "$75"
+      ],
+      "keywords_matched": [],
+      "keyword_score": 0.0,
+      "citations_count": 0,
+      "guardrail_triggered": false,
+      "latency_ms": 11,
+      "answer_preview": "What do you mean by 'term' \u2014 policy duration or something else?",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    },
+    {
+      "id": "ra-04",
+      "intent_match": false,
+      "intent_expected": "ROADSIDE",
+      "intent_actual": "COVERAGE_QA",
+      "keywords_expected": [
+        "$600",
+        "trip interruption"
+      ],
+      "keywords_matched": [
+        "trip interruption"
+      ],
+      "keyword_score": 0.5,
+      "citations_count": 4,
+      "guardrail_triggered": false,
+      "latency_ms": 1372,
+      "answer_preview": "I don't have specific policy language on trip interruption benefits for the Comprehensive Elite plan in my documents. Please contact your RoadGuard adjuster at 1-800-555-0601 for an official answer.",
+      "deepeval": {
+        "deepeval_passed": null,
+        "deepeval_error": "Invalid API key"
+      }
+    }
+  ]
+}
