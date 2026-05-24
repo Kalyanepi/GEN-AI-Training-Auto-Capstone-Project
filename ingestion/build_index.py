@@ -3,7 +3,7 @@
 Usage:
     python -m ingestion.build_index
 
-WHY a single entry point: ingestion is run rarely (only when source PDFs
+WHY a single entry point: ingestions are run rarely (only when source PDFs
 change). One reproducible script avoids "which script did we run last time?"
 """
 from __future__ import annotations
