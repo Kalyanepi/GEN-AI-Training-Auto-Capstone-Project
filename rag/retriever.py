@@ -33,7 +33,6 @@ _retrieval_cache: LRUCache[Tuple, List["ChunkResult"]] = LRUCache(
     ttl_seconds=settings.retrieval_cache_ttl_seconds,
 )
 
-
 @dataclass
 class ChunkResult:
     """A retrieved chunk with score, ready for citation + LLM context."""
