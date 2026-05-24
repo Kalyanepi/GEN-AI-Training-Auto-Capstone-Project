@@ -40,13 +40,11 @@ _SECTION_PATTERNS = [
     re.compile(r"^\s*(ARTICLE\s+[IVX\d]+)[\s:.\-]+(.+?)$", re.IGNORECASE | re.MULTILINE),
 ]
 
-
 @dataclass
 class RawPage:
     """One page extracted from a PDF before chunking."""
     page_number: int
     text: str
-
 
 @dataclass
 class PdfChunk:
