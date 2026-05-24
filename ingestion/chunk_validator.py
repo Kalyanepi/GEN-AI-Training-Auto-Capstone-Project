@@ -2,7 +2,7 @@
 
 WHY pre-embedding validation: every embedding API call costs money and time.
 Junk chunks (page footers, "Page 4 of 12", header stamps, OCR noise) waste
-both AND pollute retrieval results.
+both AND pollute retrieval results. Chunk validation
 """
 from __future__ import annotations
 
