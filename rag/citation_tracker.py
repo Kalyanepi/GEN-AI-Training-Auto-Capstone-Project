@@ -12,7 +12,6 @@ from typing import List, Optional
 from api.config import settings
 from rag.retriever import ChunkResult
 
-
 @dataclass
 class Citation:
     """Public-facing citation surfaced in API + UI."""
@@ -23,7 +22,6 @@ class Citation:
     relevance_score: float
     chunk_id: str
     source_type: str  # "pdf" | "csv"
-
 
 def _truncate_excerpt(text: str, max_chars: Optional[int] = None) -> str:
     """Trim chunk text to excerpt length with ellipsis.
