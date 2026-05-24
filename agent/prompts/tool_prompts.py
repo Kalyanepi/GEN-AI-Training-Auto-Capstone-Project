@@ -27,21 +27,36 @@ def _format_tool_result(t: ToolInvocation) -> str:
 
 
 def _format_chunks(tool_results: List[ToolInvocation]) -> str:
-    """Collect all retrieved chunks across tools into one cited block."""
-    blocks: List[str] = []
+    """Collect top retrieved chunks across tools into one cited block.
+
+    WHY top 3 only: sending all chunks to synthesis bloats the prompt and
+    slows LLM generation by 1-2 seconds. Top 3 by similarity is sufficient
+    for grounded answering; remaining citations are still shown to the user
+    separately in the citation cards.
+    """
+    all_chunks = []
     seen_ids = set()
     for t in tool_results:
-        chunks = (t.get("data") or {}).get("chunks") or []
-        for c in chunks:
-            cid = c.get("chunk_id") or f"{c.get('source_file')}:{c.get('page_number')}:{c.get('section_title')}"
-            if cid in seen_ids:
-                continue
-            seen_ids.add(cid)
-            section = c.get("section_title") or ""
-            blocks.append(
-                f"[{c.get('source_file')} p.{c.get('page_number')} | {section} | "
-                f"score={c.get('similarity_score', 0):.2f}]\n{c.get('text','').strip()}"
-            )
+        for c in (t.get("data") or {}).get("chunks") or []:
+            cid = c.get("chunk_id") or f"{c.get('source_file')}:{c.get('page_number')}"
+            if cid not in seen_ids:
+                seen_ids.add(cid)
+                all_chunks.append(c)
+
+    # Sort by similarity score (highest first) and take top 3
+    all_chunks.sort(key=lambda x: x.get("similarity_score", 0), reverse=True)
+    top_chunks = all_chunks[:3]
+
+    blocks: List[str] = []
+    for c in top_chunks:
+        section = c.get("section_title") or ""
+        # WHY truncate: keeps synthesis prompt short. Full text in citation cards.
+        text = (c.get('text') or '')[:400].strip()
+        blocks.append(
+            f"[{c.get('source_file')} p.{c.get('page_number')} | {section} | "
+            f"score={c.get('similarity_score', 0):.2f}]\n{text}"
+        )
+
     if not blocks:
         return ""
     return "## Retrieved Policy Chunks\n" + "\n\n".join(blocks)
@@ -79,8 +94,9 @@ def build_synthesis_messages(
 
     messages: List[Dict[str, str]] = [{"role": "system", "content": system_prompt}]
     if history:
-        # WHY: include short history for follow-ups ("my car" -> Camry).
-        messages.extend(history[-10:])
+        # WHY last 3 only: longer history bloats the prompt and slows synthesis.
+        # 3 turns (user+assistant pairs) is enough for follow-up context.
+        messages.extend(history[-3:])
     messages.append({
         "role": "user",
         "content": f"{context}\n\n## User Question\n{user_message}\n\n## Instruction\n{instruction}",

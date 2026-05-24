@@ -71,6 +71,14 @@ def _prewarm_hot_paths() -> None:
             logger.info("reranker_prewarmed")
         except Exception as e:
             logger.warning("reranker_prewarm_failed", error=str(e))
+    # WHY: Presidio + spaCy model takes ~2s to initialize on first request.
+    # Pre-warming here means first chat request doesn't pay this cost.
+    try:
+        from guardrails.input_guardrails import _get_presidio_engine
+        _get_presidio_engine()
+        logger.info("presidio_prewarmed")
+    except Exception as e:
+        logger.warning("presidio_prewarm_failed", error=str(e))
 
 
 def create_app() -> FastAPI:

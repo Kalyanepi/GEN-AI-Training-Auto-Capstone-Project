@@ -59,12 +59,21 @@ def handle_rp_query_param() -> None:
     try:
         idx = int(st.query_params["rp"])
         if 0 <= idx < len(CATEGORIES):
-            # Store the category index so the chat panel renders suggestion chips.
-            st.session_state.rp_category = idx
+            # WHY dedupe: when the user clicks the browser BACK button, the
+            # ?rp= URL is restored from history and this handler re-fires.
+            # Skip if a request is already pending or the same category is
+            # already active.
+            if (
+                not st.session_state.get("pending_faq")
+                and st.session_state.get("rp_category") != idx
+            ):
+                st.session_state.rp_category = idx
     except (ValueError, IndexError):
         pass
     st.query_params.clear()
-    st.rerun()
+    # WHY no st.rerun(): the ?rp= URL navigation already triggers a full
+    # Streamlit rerun. A second rerun here causes two consecutive reloads
+    # which blanks the sidebar and layout for ~4 seconds.
 
 
 def render_right_panel() -> None:

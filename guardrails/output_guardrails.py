@@ -46,6 +46,26 @@ _FAULT_PATTERNS = [
 
 _DOLLAR_RE = re.compile(r"\$\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?)")
 
+# WHY strip phone numbers: GPT-4o hallucinates plausible US phone numbers
+# (especially the 555-XXXX range) that are not present in any retrieved chunk.
+# Stripping them before the answer reaches the user prevents false contact info.
+_PHONE_RE = re.compile(
+    r"(?:"
+    r"1[-\s]?\(?\d{3}\)?[-\s]\d{3}[-\s]\d{4}"  # 1-800-555-0600
+    r"|\(?\d{3}\)?[-\s.]\d{3}[-\s.]\d{4}"         # (800) 555-0600 / 800.555.0600
+    r"|\+1[-\s]?\d{10}"                            # +18005550600
+    r")",
+    re.IGNORECASE,
+)
+
+# Sentence patterns that introduce a phone number — scrub the whole sentence.
+_PHONE_SENTENCE_RE = re.compile(
+    r"[^.!?]*(?:call|contact|reach|dial|phone)[^.!?]*"
+    + _PHONE_RE.pattern
+    + r"[^.!?]*[.!?]?",
+    re.IGNORECASE,
+)
+
 # Coverage-question keywords that REQUIRE a citation in the final answer.
 _CITATION_REQUIRED_TRIGGERS = [
     "deductible", "exclusion", "limit", "total loss", "threshold",
@@ -80,6 +100,27 @@ def _fallback_message(reason: str) -> str:
         "I can only help with auto insurance topics. "
         "Please try rephrasing your question."
     )
+
+
+def strip_hallucinated_phones(answer: str) -> str:
+    """Remove hallucinated phone numbers from the LLM answer.
+
+    WHY scrub instead of block: the rest of the answer (FNOL steps, citations)
+    is valid and useful. Blocking the entire response because GPT-4o added a
+    fake phone number would hurt the user experience unnecessarily.
+    We remove the phone number (and its introducing sentence if possible) and
+    log a warning for observability.
+    """
+    if not _PHONE_RE.search(answer):
+        return answer
+    logger.warning("output_guardrail_phone_scrubbed")
+    # First try to remove full sentences that introduce a phone number.
+    cleaned = _PHONE_SENTENCE_RE.sub("", answer)
+    # Then strip any bare phone numbers that remain.
+    cleaned = _PHONE_RE.sub("", cleaned)
+    # Clean up double spaces and leading/trailing whitespace from removals.
+    cleaned = re.sub(r"  +", " ", cleaned).strip()
+    return cleaned
 
 
 def _check_legal_advice(answer: str) -> Optional[OutputDecision]:
@@ -190,9 +231,17 @@ def check_output(
     citations: List[Citation],
     allowed_dollar_values: Optional[List[float]] = None,
 ) -> OutputDecision:
-    """Run all output guardrails. First blocker wins."""
+    """Run all output guardrails. First blocker wins.
+
+    WHY strip_hallucinated_phones first: phone scrubbing is a non-blocking
+    sanitization pass. The cleaned answer is then checked by all blocking
+    guards so they never see the hallucinated number either.
+    """
     _citations = citations or []
     _allowed = allowed_dollar_values or []
+
+    # Sanitize phone numbers before any blocking check.
+    answer = strip_hallucinated_phones(answer)
 
     for check in (
         lambda: _check_legal_advice(answer),
@@ -203,4 +252,4 @@ def check_output(
         decision = check()
         if decision and decision.blocked:
             return decision
-    return OutputDecision(blocked=False)
+    return OutputDecision(blocked=False, message=answer)

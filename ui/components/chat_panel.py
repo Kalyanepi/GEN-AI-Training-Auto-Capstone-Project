@@ -196,17 +196,37 @@ def handle_faq_query_param() -> None:
     if "faq_idx" not in st.query_params:
         return
     try:
-        idx = int(st.query_params["faq_idx"])
-        faqs = _get_session_faqs()
-        if 0 <= idx < len(faqs):
-            _icon, _cat, question, ctx = faqs[idx]
-            if ctx:
-                st.session_state.context_mode = ctx
-            st.session_state.pending_faq = question
+        pool_idx = int(st.query_params["faq_idx"])
+        # WHY lookup from _FAQ_POOL directly: the URL contains the actual pool
+        # index (not display position), so we can retrieve the correct question
+        # even if _get_session_faqs() would return a different random deck.
+        if 0 <= pool_idx < len(_FAQ_POOL):
+            _icon, _cat, question, ctx = _FAQ_POOL[pool_idx]
+            # WHY dedupe checks: when the user clicks the browser BACK button,
+            # the URL `?faq_idx=N` is restored from history → this handler
+            # re-fires the same question, producing a duplicate user turn.
+            # Skip if (a) a request is already pending, or (b) this exact
+            # question is already the most recent user message in history.
+            already_pending = bool(st.session_state.get("pending_faq"))
+            msgs = st.session_state.get("messages", [])
+            last_user = next(
+                (m for m in reversed(msgs) if m.get("role") == "user"),
+                None,
+            )
+            already_asked = last_user and last_user.get("content") == question
+            if not already_pending and not already_asked:
+                if ctx:
+                    st.session_state.context_mode = ctx
+                st.session_state.pending_faq = question
+                # Only clear params if we actually set pending_faq.
+                # If already_asked, keep URL as-is so back button works naturally.
+                st.query_params.clear()
     except (ValueError, IndexError):
         pass
-    st.query_params.clear()
-    st.rerun()
+    # WHY no st.rerun() here: the ?faq_idx= URL navigation already triggers a
+    # full Streamlit rerun. Adding another rerun causes two consecutive reloads
+    # which blanks the sidebar and layout for ~4 seconds. The pending_faq set
+    # above will be picked up by render_chat_panel on this same rerun cycle.
 
 
 def _build_payload(message: str) -> dict:
@@ -523,10 +543,10 @@ def _render_welcome() -> None:
             I am Auto Insurance AI Copilot, how can I help you today?
           </div>
           <div class="rg-feat-row">
-            <span class="rg-feat-tag"><i class="ti ti-file-text"></i> Policy RAG</span>
-            <span class="rg-feat-tag"><i class="ti ti-table"></i> Repair CSV</span>
-            <span class="rg-feat-tag"><i class="ti ti-scale"></i> Total Loss Calc</span>
-            <span class="rg-feat-tag"><i class="ti ti-shield-lock"></i> Guardrail Protected</span>
+            <span class="rg-feat-tag"><i class="ti ti-circle-check"></i> Accurate</span>
+            <span class="rg-feat-tag"><i class="ti ti-anchor"></i> Grounded</span>
+            <span class="rg-feat-tag"><i class="ti ti-quote"></i> Cited</span>
+            <span class="rg-feat-tag"><i class="ti ti-shield-lock"></i> Never Fabricated</span>
           </div>
         </div>""",
         unsafe_allow_html=True,
@@ -534,10 +554,15 @@ def _render_welcome() -> None:
 
     st.markdown('<div class="rg-faq-label">Try asking</div>', unsafe_allow_html=True)
     faqs = _get_session_faqs()
+
     faq_left, faq_right = "", ""
-    for i, (icon, category, question, _ctx) in enumerate(faqs):
+    for disp_i, (icon, category, question, _ctx) in enumerate(faqs):
+        # WHY actual_pool_idx: We store the actual index into _FAQ_POOL in the URL,
+        # not the display position (0-3). This prevents question mismatch when
+        # the page reloads and _get_session_faqs() returns a different random deck.
+        actual_pool_idx = st.session_state.faq_indices[disp_i]
         card = (
-            f'<a href="?faq_idx={i}" target="_self" class="rg-faq-card">'
+            f'<a href="?faq_idx={actual_pool_idx}" target="_self" class="rg-faq-card">'
             f'  <span class="rg-faq-icon-wrap"><i class="ti {icon}"></i></span>'
             f'  <span class="rg-faq-body">'
             f'    <span class="rg-faq-cat">{category}</span>'
@@ -545,7 +570,7 @@ def _render_welcome() -> None:
             f'  </span>'
             f'</a>'
         )
-        if i % 2 == 0:
+        if disp_i % 2 == 0:
             faq_left += card
         else:
             faq_right += card
@@ -595,8 +620,10 @@ def render_chat_panel() -> None:
         _render_welcome()
         return
 
-    # ALWAYS render the full conversation history first — otherwise a new
-    # submission would erase prior turns from view.
+    # WHY enumerate with index check: for very long conversations (50+ turns),
+    # we could implement virtual scrolling here. Currently we render all
+    # messages which is fine for <30 turns but may lag with 100+.
+    # If performance degrades, add: if idx < max_visible: render, else: break.
     for idx, msg in enumerate(msgs):
         # Don't show follow-up pills on the last historical assistant turn
         # if we are about to render a fresh turn underneath it.

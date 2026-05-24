@@ -113,7 +113,9 @@ class Orchestrator:
         blocked the router decision is discarded, but starting the router
         early costs nothing extra — we already paid for the parallel run.
         """
+        t0 = time.perf_counter()
         msg = state["user_message"]
+        logger.info("preflight_start", message=msg[:50])
 
         # Fast path: greetings bypass both LLM calls entirely — zero latency.
         if _check_greeting(msg):
@@ -225,6 +227,7 @@ class Orchestrator:
                 "Could you give me a bit more detail about what you'd like to know?"
             )
 
+        logger.info("preflight_end", latency_ms=int((time.perf_counter() - t0) * 1000))
         return state
 
     async def _node_tool_execution(self, state: AgentState) -> AgentState:
@@ -240,6 +243,10 @@ class Orchestrator:
         list order, so we preserve deterministic ordering for the final
         prompt even though network/CPU dispatch order is arbitrary.
         """
+        t0 = time.perf_counter()
+        tools_to_run = state.get("tools_to_invoke") or []
+        logger.info("tools_start", tools=tools_to_run)
+
         tool_results: List[Dict[str, Any]] = state.get("tool_results") or []
         all_citations: List[Citation] = list(state.get("citations") or [])
         allowed_dollars: List[float] = list(state.get("allowed_dollar_values") or [])
@@ -305,6 +312,7 @@ class Orchestrator:
         state["tool_results"] = tool_results
         state["citations"] = all_citations
         state["allowed_dollar_values"] = allowed_dollars
+        logger.info("tools_end", latency_ms=int((time.perf_counter() - t0) * 1000))
         return state
 
     async def _node_llm_synthesis(self, state: AgentState) -> AgentState:
@@ -313,6 +321,9 @@ class Orchestrator:
         # (GREETING, CLARIFICATION_NEEDED, OUT_OF_SCOPE all set it directly).
         if state.get("final_answer"):
             return state
+
+        t0 = time.perf_counter()
+        logger.info("synthesis_start", intent=state.get("detected_intent"), model=settings.openai_synthesis_model)
 
         tool_results = state.get("tool_results") or []
         any_data = any(t.get("success") for t in tool_results)
@@ -346,13 +357,14 @@ class Orchestrator:
                 model=settings.openai_synthesis_model,
                 messages=messages,
                 temperature=0.2,
-                max_tokens=900,
+                max_tokens=500,  # Reduced from 900 for faster responses (~1-2s savings)
             )
             answer = (resp.choices[0].message.content or "").strip()
             state["final_answer"] = answer or self._no_answer_fallback()
         except Exception as e:
             logger.error("synthesis_failed", error=str(e), exc_info=True)
             state["final_answer"] = self._no_answer_fallback()
+        logger.info("synthesis_end", latency_ms=int((time.perf_counter() - t0) * 1000))
         return state
 
     def _no_answer_fallback(self) -> str:
@@ -385,6 +397,10 @@ class Orchestrator:
             state["citations"] = []
         else:
             state["output_guardrail_triggered"] = False
+            # WHY: check_output may have sanitized the answer (e.g. stripped
+            # hallucinated phone numbers). Use the cleaned text if returned.
+            if decision.message:
+                state["final_answer"] = decision.message
             state["disclaimer"] = (
                 "Official determination is made by your assigned adjuster."
             )
@@ -706,7 +722,7 @@ class Orchestrator:
                     model=settings.openai_synthesis_model,
                     messages=messages,
                     temperature=0.2,
-                    max_tokens=900,
+                    max_tokens=500,  # Reduced from 900 for faster responses
                     stream=True,
                 )
                 async for chunk in stream:
