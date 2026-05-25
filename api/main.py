@@ -1,4 +1,4 @@
-"""FastAPI app factory + lifespan events.
+"""FastAPI app factory + lifespan events..
 
 WHY lifespan: load FAISS index and CSVs once at startup. Without lifespan
 warmup, the first chat request would pay the ~150ms load cost.
