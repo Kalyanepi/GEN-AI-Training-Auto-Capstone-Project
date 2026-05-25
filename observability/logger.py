@@ -1,7 +1,7 @@
 """Structured JSON logger used by every module.
 
 WHY: Production debugging on EC2 requires machine-parseable logs. Plain text
-logs make it impossible to filter by session_id, tool name, or latency.
+logs make it impossible to filter by session_id, tool name, or latency..
 """
 from __future__ import annotations
 
