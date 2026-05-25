@@ -2,7 +2,7 @@
 
 WHY: Centralizing the trace setup means every node/tool gets the same project,
 tags, and run metadata — and the API can always return a clickable trace URL
-in its response.
+in its response..
 """
 from __future__ import annotations
 
