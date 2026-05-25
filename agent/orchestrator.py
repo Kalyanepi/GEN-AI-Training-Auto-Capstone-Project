@@ -9,7 +9,7 @@ Node flow (per architecture plan §4.3):
 
 WHY LangGraph over chains: typed state passing + conditional edges + visualizable
 graph make multi-tool flows debuggable. Every node mutates AgentState and the
-final state contains everything needed to build the API response.
+final state contains everything needed to build the API response..
 """
 from __future__ import annotations
 
