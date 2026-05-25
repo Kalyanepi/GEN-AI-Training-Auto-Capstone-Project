@@ -24,7 +24,7 @@ st.set_page_config(
 )
 
 # Inject nav-hiding CSS as the very first render call so the multipage
-# nav links never flash before the full design system CSS loads.
+# nav links never flash before the full design system CSS loads....
 st.markdown(
     "<style>"
     "[data-testid='stSidebarNav']{display:none!important}"
