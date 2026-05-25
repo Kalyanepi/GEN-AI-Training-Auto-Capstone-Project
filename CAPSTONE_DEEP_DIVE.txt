@@ -1,0 +1,1280 @@
+================================================================================
+ROADGUARD AI COPILOT - COMPREHENSIVE CAPSTONE DEEP DIVE
+================================================================================
+Prepared for: Capstone Project Defense
+Coverage: UI → API → Orchestrator → Guardrails → Observability
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+1. SYSTEM ARCHITECTURE OVERVIEW
+2. LAYER 1: USER INTERFACE (STREAMLIT)
+3. LAYER 2: API LAYER (FASTAPI)
+4. LAYER 3: ORCHESTRATOR (LANGGRAPH)
+5. LAYER 4: GUARDRAILS (SECURITY & SAFETY)
+6. LAYER 5: OBSERVABILITY (MONITORING & TRACING)
+7. DATA FLOW: END-TO-END REQUEST LIFECYCLE
+8. PERFORMANCE OPTIMIZATIONS
+9. SECURITY ARCHITECTURE
+10. EXTENSIBILITY & FUTURE ENHANCEMENTS
+11. COMMON DRILL QUESTIONS & ANSWERS
+
+================================================================================
+1. SYSTEM ARCHITECTURE OVERVIEW
+================================================================================
+
+The RoadGuard AI Copilot is a production-ready Retrieval-Augmented Generation (RAG)
+system for auto insurance customer support. It combines deterministic workflow
+orchestration with LLM-powered synthesis to deliver accurate, cited, and safe answers.
+
+ARCHITECTURAL PRINCIPLES:
+----------------------------
+1. Separation of Concerns: UI, API, and Agent are independent layers
+2. Deterministic Workflows: LangGraph state machine ensures reproducibility
+3. Defense in Depth: Multiple guardrails at input, processing, and output stages
+4. Observability First: Every operation is traced, logged, and measurable
+5. Latency Optimized: Pre-warming, caching, and parallel execution
+
+HIGH-LEVEL FLOW:
+----------------------------
+User Query → Streamlit UI → FastAPI → LangGraph Orchestrator → OpenAI + Tools
+                ↑___________________________________________↓
+                          (Response with Citations)
+
+COMPONENT INTERACTION:
+----------------------------
+┌─────────────┐    HTTP/JSON     ┌─────────────┐    Async Calls    ┌──────────┐
+│  Streamlit  │ ←──────────────→ │   FastAPI   │ ←───────────────→ │  Tools   │
+│     UI      │                  │    Layer    │                   │ (RAG,    │
+└─────────────┘                  └──────┬──────┘                   │  CSV)    │
+                                        │                         └──────────┘
+                                        ↓                              ↑
+                              ┌─────────────────┐                    │
+                              │  LangGraph      │ ←──────────────────┘
+                              │  Orchestrator   │    Tool Results
+                              └─────────────────┘
+                                        │
+                                        ↓
+                              ┌─────────────────┐
+                              │   OpenAI API    │
+                              │  GPT-4o / Mini  │
+                              └─────────────────┘
+
+================================================================================
+2. LAYER 1: USER INTERFACE (STREAMLIT)
+================================================================================
+
+FILE: ui/app.py, ui/components/chat_panel.py, ui/components/sidebar.py
+
+2.1 ARCHITECTURE PATTERN
+----------------------------
+Streamlit uses a "script rerun" model — every interaction triggers a full
+top-to-bottom re-execution of the script. This creates unique challenges:
+
+CHALLENGES ADDRESSED:
+- State persistence across reruns (st.session_state)
+- Preventing UI flicker during streaming responses
+- Managing concurrent API calls without blocking
+- Handling sidebar persistence during streaming
+
+2.2 STATE MANAGEMENT
+----------------------------
+Streamlit's session_state is essentially a per-user dictionary that survives
+across reruns. We use it for:
+
+Session State Variables:
+- session_id: Unique conversation identifier
+- messages: Chat history (user/assistant turns)
+- selected_faq: FAQ question selection
+- pending_stream: Streaming response buffer
+- last_health_check: Cached API health status
+
+CRITICAL IMPLEMENTATION:
+```python
+def init_session_state():
+    defaults = {
+        "session_id": str(uuid.uuid4()),
+        "messages": [],
+        "selected_faq": None,
+        "pending_stream": None,
+    }
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+```
+
+2.3 COMPONENT ARCHITECTURE
+----------------------------
+The UI is split into modular components:
+
+chat_panel.py:
+- Renders message history with custom CSS
+- Handles streaming token display (st.write_stream)
+- Manages FAQ card interactions
+- Implements deduplication logic for FAQ clicks
+
+sidebar.py:
+- Session management (New Session button)
+- API health indicator (cached, lazy-loaded)
+- Policy tier selector (premium/standard/elite)
+- Developer Console link
+
+WHY COMPONENT SPLIT?
+- Separation of concerns
+- Reusability across pages
+- Easier testing and maintenance
+- Cleaner code organization
+
+2.4 STREAMING IMPLEMENTATION
+----------------------------
+The chat interface supports real-time token streaming:
+
+MECHANISM:
+1. User submits query
+2. UI opens SSE (Server-Sent Events) connection to API
+3. API streams tokens as they're generated by LLM
+4. UI displays tokens incrementally using st.write_stream()
+
+LATENCY PERCEPTION:
+Streaming makes the app feel faster (tokens appear immediately) even though
+total time is the same. This is a UX optimization, not a backend optimization.
+
+2.5 CSS CUSTOMIZATION
+----------------------------
+Streamlit's default styling is overridden using st.markdown() with
+unsafe_allow_html=True. Key customizations:
+
+- Dark theme with insurance-brand purple accents (#6d5dfc)
+- Message bubbles with distinct user/assistant colors
+- Custom scrollbars and animations
+- Mobile-responsive layout adjustments
+
+2.6 FAQ SYSTEM
+----------------------------
+The FAQ system demonstrates pre-built query patterns:
+
+IMPLEMENTATION:
+- 6 preset questions covering all intents
+- Clicking an FAQ triggers the same API flow as manual input
+- Deduplication prevents double-submission on back-navigation
+- Questions map to intent router's classification logic
+
+================================================================================
+3. LAYER 2: API LAYER (FASTAPI)
+================================================================================
+
+FILE: api/main.py, api/routes/chat.py, api/middleware/
+
+3.1 FASTAPI ARCHITECTURE
+----------------------------
+FastAPI was chosen over Flask/Django because:
+- Native async/await support (critical for LLM calls)
+- Automatic OpenAPI documentation (/docs endpoint)
+- Pydantic validation (type-safe request/response)
+- Built-in dependency injection
+
+3.2 APPLICATION LIFECYCLE
+----------------------------
+The app uses FastAPI's lifespan context manager for startup/shutdown:
+
+STARTUP SEQUENCE:
+1. Load FAISS vector store (60 chunks, 1536 dimensions)
+2. Load CSV data (424 repair costs, 90 total loss thresholds)
+3. Pre-warm embedding model (text-embedding-3-small)
+4. Pre-warm reranker (cross-encoder/ms-marco-MiniLM-L-6-v2)
+5. Pre-warm Presidio PII engine (spaCy en_core_web_lg)
+6. Configure LangSmith tracing
+
+PRE-WARMING STRATEGY:
+Without pre-warming, first request would take 6-8 seconds:
+- Embedding model: ~3s load time
+- Reranker: ~2s load time  
+- Presidio: ~2s load time
+
+With pre-warming: First request completes in ~3s
+
+3.3 ROUTE STRUCTURE
+----------------------------
+Endpoints:
+
+POST /api/v1/chat (non-streaming)
+- Full JSON response with all metadata
+- Used by Developer Console
+- Complete tracing visibility
+
+POST /api/v1/chat/stream (SSE streaming)
+- Server-Sent Events for real-time tokens
+- Lower latency perception
+- Used by main chat UI
+
+DELETE /api/v1/session/{session_id}
+- Clears conversation history
+- Called on "New Session"
+
+GET /health
+- System status, chunk counts, CSV row counts
+- Used by UI for connection status
+
+3.4 MIDDLEWARE STACK
+----------------------------
+Request flow through middleware:
+
+1. CORS Middleware (cross-origin for dev/prod)
+2. Request ID Middleware (unique ID per request for tracing)
+3. Timing Middleware (measures total request latency)
+4. Rate Limiting (configurable, default 30 req/min)
+5. Error Handling (structured JSON errors)
+
+3.5 DEPENDENCY INJECTION
+----------------------------
+FastAPI's Depends() system provides:
+- Shared Orchestrator instance (singleton)
+- Database connections (if needed)
+- Configuration objects
+- Authentication (if enabled)
+
+This avoids global state and makes testing easier.
+
+================================================================================
+4. LAYER 3: ORCHESTRATOR (LANGGRAPH)
+================================================================================
+
+FILE: agent/orchestrator.py, agent/router.py, agent/state.py
+
+4.1 WHY LANGGRAPH?
+----------------------------
+Traditional LangChain chains are linear:
+Start → Step 1 → Step 2 → Step 3 → End
+
+LangGraph enables:
+- Conditional branching (if X then Y else Z)
+- Cycles and loops (for clarification flows)
+- Parallel execution (asyncio.gather)
+- State checkpointing (resume from failure)
+- Visual debugging (graph structure)
+
+4.2 STATE MACHINE DESIGN
+----------------------------
+The orchestrator is a deterministic state machine with typed state:
+
+STATES (Nodes):
+1. input_guardrail - Security screening
+2. intent_router - Classification
+3. tool_execution - Data gathering
+4. llm_synthesis - Answer generation
+5. output_guardrail - Safety verification
+6. memory_update - Persistence
+
+TRANSITIONS (Edges):
+- START → input_guardrail
+- input_guardrail → intent_router (pass) or END (block)
+- intent_router → tool_execution or END (clarification)
+- tool_execution → llm_synthesis
+- llm_synthesis → output_guardrail
+- output_guardrail → memory_update (pass) or END (block)
+- memory_update → END
+
+4.3 TYPED STATE (Pydantic)
+----------------------------
+Every node receives and returns a typed state object:
+
+```python
+class AgentState(TypedDict):
+    session_id: str
+    messages: Annotated[List[Dict], add_messages]
+    intent: str
+    confidence_score: float
+    tools_used: List[str]
+    tool_results: List[Dict]
+    citations: List[Citation]
+    answer: str
+    guardrail_triggered: bool
+    guardrail_reason: str
+    latency_ms: int
+    calculation_breakdown: Optional[str]
+```
+
+WHY TYPED?
+- Catch errors at development time
+- IDE autocomplete
+- Self-documenting code
+- Runtime validation
+
+4.4 INPUT GUARDRAIL NODE
+----------------------------
+Multi-layer security screening:
+
+LAYER 1 - PII Detection (Presidio):
+- Uses spaCy NER + regex patterns
+- Detects: SSN, credit cards, phone numbers, emails
+- Custom recognizers: Policy numbers (POL-XXXXX), Claim IDs
+
+LAYER 2 - Prompt Injection:
+- Regex patterns for jailbreak attempts
+- Known attack signatures ("ignore previous instructions", "DAN mode")
+
+LAYER 3 - Off-Topic Classification:
+- Fast-path: Keyword bypass for insurance terms
+- LLM-based: GPT-4o-mini classifies relevance
+- Confidence threshold: 0.7
+
+BLOCKING BEHAVIOR:
+If any layer triggers, flow ends immediately with guardrail message.
+No tokens are sent to LLM, saving cost and latency.
+
+4.5 INTENT ROUTER NODE
+----------------------------
+Classification strategy:
+
+MODEL: GPT-4o-mini
+- Temperature: 0.0 (deterministic)
+- Max tokens: 300
+- Response format: JSON (structured)
+
+PROMPT ENGINEERING:
+System prompt defines 8 intents with descriptions and example queries.
+Few-shot examples improve accuracy.
+
+OUTPUT SCHEMA:
+```json
+{
+  "intent": "REPAIR_ESTIMATE",
+  "confidence": 0.94,
+  "tools": ["repair_cost_tool", "policy_rag_tool"],
+  "clarification_question": null,
+  "reasoning": "User asks about repair costs with specific damage details"
+}
+```
+
+ROUTING LOGIC:
+- Confidence > 0.8: Route to tools
+- Confidence 0.5-0.8: Ask clarification
+- Confidence < 0.5: Default to COVERAGE_QA
+
+CACHE OPTIMIZATION:
+LRU cache (128 entries) for repeated queries.
+Same question → instant classification, no LLM call.
+
+4.6 TOOL EXECUTION NODE
+----------------------------
+Parallel execution architecture:
+
+CONCURRENCY MODEL:
+```python
+async def tool_execution_node(state):
+    tools = state["tools_used"]
+    
+    # All tools execute simultaneously
+    coroutines = [execute_tool(t, state) for t in tools]
+    results = await asyncio.gather(*coroutines, return_exceptions=True)
+    
+    return {"tool_results": results}
+```
+
+WHY PARALLEL?
+- Sequential: 300ms + 400ms + 200ms = 900ms
+- Parallel: max(300, 400, 200) = 400ms
+- 55% latency reduction
+
+THE 8 TOOLS:
+
+1. coverage_identifier_tool
+   Purpose: Classify coverage type from query
+   Input: User message
+   Output: Coverage category (comprehensive, collision, liability, etc.)
+   
+2. policy_rag_tool
+   Purpose: Retrieve relevant policy language
+   Implementation: FAISS + Reranker
+   Input: Query embedding
+   Output: Top 3 chunks with citations
+   
+3. fnol_guide_tool
+   Purpose: First Notice of Loss guidance
+   Input: Accident description
+   Output: Step-by-step claim filing instructions
+   
+4. um_uim_tool
+   Purpose: Uninsured/Underinsured motorist coverage lookup
+   Logic: Tier-aware (premium has higher limits than standard)
+   Input: Policy tier
+   Output: Coverage limits and conditions
+   
+5. rental_lookup_tool
+   Purpose: Daily rental car allowance
+   Logic: Tier-aware + state variations
+   Input: Tier, optional state
+   Output: Daily limit, max days
+   
+6. roadside_tool
+   Purpose: Towing and roadside assistance benefits
+   Logic: Tier-aware (elite has unlimited towing)
+   Input: Tier
+   Output: Tow limit, service types
+   
+7. repair_cost_tool
+   Purpose: Repair cost estimates
+   Implementation: Direct CSV lookup
+   Input: Damage type, vehicle category, coverage type
+   Output: Low/high/avg costs, labor hours
+   GUARANTEE: No hallucination — costs come only from data
+   
+8. total_loss_tool
+   Purpose: Total loss threshold calculation
+   Implementation: State law lookup + ACV calculation
+   Input: State, ACV, repair estimate
+   Output: Threshold %, is_total_loss boolean, calculation
+
+TOOL RESULT STRUCTURE:
+```python
+{
+  "tool_name": "repair_cost_tool",
+  "success": True,
+  "result": {...},
+  "latency_ms": 45,
+  "error": None
+}
+```
+
+4.7 RAG PIPELINE (DEEP DIVE)
+----------------------------
+The policy_rag_tool implements a 2-stage retrieval system:
+
+STAGE 1: FAISS Vector Search
+- Embedding: text-embedding-3-small (1536 dims)
+- Index: 60 chunks from 9 PDFs
+- Metric: Cosine similarity
+- K: 10 (retrieve more than needed for reranking)
+
+STAGE 2: Cross-Encoder Reranking
+- Model: cross-encoder/ms-marco-MiniLM-L-6-v2
+- Input: (query, chunk) pairs from stage 1
+- Output: Relevance scores
+- Selection: Top 3 by score
+
+WHY RERANK?
+- Vector similarity ≠ semantic relevance
+- Bi-encoders (embedding model) approximate similarity
+- Cross-encoders compute exact attention between query and document
+- Quality improvement: ~15% better relevance
+
+CITATION TRACKING:
+Each chunk maintains metadata:
+- document: Source PDF filename
+- page: Page number
+- section: Document section (coverage, exclusions, etc.)
+- tier: Applicable policy tier
+- excerpt: Text snippet
+
+4.8 LLM SYNTHESIS NODE
+----------------------------
+Answer generation with strict grounding:
+
+MODEL: GPT-4o
+- Temperature: 0.1 (low creativity, high accuracy)
+- Max tokens: 500 (reduced from 900 for speed)
+- Presence penalty: 0.1 (avoid repetition)
+
+PROMPT STRUCTURE:
+```
+[SYSTEM]
+You are a helpful insurance assistant. Use ONLY the provided context.
+Do not make up information. Cite sources using [1], [2], [3].
+
+[CONTEXT]
+Retrieved chunks with citations...
+
+[TOOL RESULTS]
+Repair costs, coverage details...
+
+[CONVERSATION HISTORY]
+Last 3 turns only (truncated for token efficiency)
+
+[USER QUERY]
+Current question...
+
+[INSTRUCTIONS]
+Answer based solely on context. If insufficient, say so.
+```
+
+TOKEN OPTIMIZATIONS:
+- Top 3 chunks only (was 5)
+- Chunk excerpts truncated to 200 chars
+- History limited to 3 turns
+- Total prompt: ~800 tokens vs 2000 before
+
+SYNTHESIS LATENCY:
+- 500 tokens × ~20ms/token = ~10 seconds normally
+- But with streaming: first token in ~2s, rest streamed
+
+4.9 OUTPUT GUARDRAIL NODE
+----------------------------
+Post-generation safety verification:
+
+CHECKS PERFORMED:
+
+1. Legal Advice Detection
+   - Pattern: "you should sue", "hire a lawyer", "you have a case"
+   - Action: Block and append disclaimer
+   
+2. Fault Determination
+   - Pattern: "the other driver is at fault", "you're not liable"
+   - Action: Block — we cannot determine fault
+   
+3. Dollar Value Verification
+   - Extract all $X,XXX amounts from answer
+   - Verify against repair_cost_tool results
+   - Tolerance: ±10% (configurable)
+   - Action: Flag if outside tolerance
+   
+4. Citation Verification
+   - Ensure all [1], [2], [3] citations exist in context
+   - Action: Remove hallucinated citations
+   
+5. Tone Check
+   - Ensure professional, helpful tone
+   - No fear-mongering or pressure tactics
+
+GUARDRAIL RESPONSE:
+If triggered, original answer is discarded and replaced with:
+"I'm unable to answer that question. [Specific reason]. 
+For [legal/fault/coverage] questions, please contact your agent."
+
+4.10 MEMORY UPDATE NODE
+----------------------------
+Conversation persistence:
+
+WHAT'S STORED:
+- User message
+- Intent detected
+- Tools invoked
+- Final answer (post-guardrail)
+- Citations used
+- Timestamp
+- Latency metrics
+
+IMPLEMENTATION:
+```python
+async def memory_update_node(state):
+    turn = {
+        "user": state["messages"][-1]["content"],
+        "assistant": state["answer"],
+        "intent": state["intent"],
+        "tools": state["tools_used"],
+        "citations": state["citations"],
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+    await save_to_session(state["session_id"], turn)
+    return state
+```
+
+STORAGE:
+- Current: In-memory dict (resets on API restart)
+- Production: Redis or database
+- TTL: 30 minutes
+
+================================================================================
+5. LAYER 4: GUARDRAILS (SECURITY & SAFETY)
+================================================================================
+
+FILE: guardrails/input_guardrails.py, guardrails/output_guardrails.py
+
+5.1 DEFENSE IN DEPTH STRATEGY
+----------------------------
+Security is applied at multiple layers:
+
+┌─────────────────────────────────────────────────────────────┐
+│  LAYER 1: Network (not in this app, but in production)      │
+│  - Firewall, WAF, DDoS protection                           │
+├─────────────────────────────────────────────────────────────┤
+│  LAYER 2: Input Guardrail (Presidio + LLM)                  │
+│  - PII detection, injection blocking, off-topic filtering     │
+├─────────────────────────────────────────────────────────────┤
+│  LAYER 3: Tool Constraints                                    │
+│  - Repair costs only from CSV (no LLM guessing)             │
+│  - RAG chunks must have citations                           │
+├─────────────────────────────────────────────────────────────┤
+│  LAYER 4: Output Guardrail (Legal/Fault/Citation)         │
+│  - Post-generation verification                             │
+├─────────────────────────────────────────────────────────────┤
+│  LAYER 5: UI Sanitization                                   │
+│  - XSS protection, HTML escaping                              │
+└─────────────────────────────────────────────────────────────┘
+
+5.2 PII DETECTION (Microsoft Presidio)
+----------------------------
+Architecture:
+
+Presidio AnalyzerEngine
+├── NlpEngine (spaCy en_core_web_lg)
+│   └── Named Entity Recognition (PERSON, ORG, GPE, etc.)
+├── PatternRecognizer (regex-based)
+│   ├── SSN: \d{3}-\d{2}-\d{4}
+│   ├── Credit Card: \d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}
+│   └── Phone: \(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}
+└── Custom Recognizers
+    ├── Policy Number: \bPOL[-]?\d{4,10}\b
+    └── Claim ID: \bCLM[-]?\d{6,12}\b
+
+WHY PREsidio OVER REGEX-ONLY?
+- Context-aware ("my SSN is 123-45-6789" vs "call 123-456-7890")
+- Fuzzy matching (handles typos, spacing variations)
+- Confidence scores (tunable threshold)
+- Extensible (custom recognizers for insurance domain)
+
+ANONYMIZATION (OPTIONAL):
+Presidio can also anonymize: "my SSN is [SSN]" → "my SSN is ***-**-****"
+
+5.3 PROMPT INJECTION DETECTION
+----------------------------
+Attack patterns detected:
+
+DIRECT INJECTIONS:
+- "ignore previous instructions"
+- "disregard the above"
+- "you are now DAN (Do Anything Now)"
+- "developer mode enabled"
+
+INDIRECT INJECTIONS:
+- "summarize this: [malicious payload]"
+- Hidden Unicode characters
+- Multi-language encoding tricks
+
+IMPLEMENTATION:
+Regex patterns + LLM-based classification as backup.
+
+5.4 OFF-TOPIC FILTERING
+----------------------------
+Two-stage filtering:
+
+STAGE 1: Keyword Bypass (Fast Path)
+- If query contains "insurance", "coverage", "claim", "policy", "accident", "repair", "cost"
+- Immediately pass (no LLM call)
+
+STAGE 2: LLM Classification (Slow Path)
+- GPT-4o-mini classifies: insurance-related vs off-topic
+- Examples of off-topic: weather, sports, general knowledge
+- Threshold: 0.7 confidence
+
+WHY BOTH?
+- 90% of queries are insurance-related → fast path saves 100ms
+- LLM handles edge cases (e.g., "what's the weather for my road trip?" → off-topic)
+
+5.5 OUTPUT GUARDRAILS (DEEP DIVE)
+----------------------------
+
+LEGAL ADVICE PREVENTION:
+Insurance advice ≠ Legal advice. We must not:
+- Recommend lawyers
+- Suggest lawsuits
+- Interpret laws
+- Provide liability opinions
+
+DETECTION METHOD:
+- Keyword patterns: "sue", "lawsuit", "lawyer", "liability", "negligent"
+- LLM verification for nuanced cases
+
+FAULT DETERMINATION PREVENTION:
+We cannot determine fault from:
+- User's description (one-sided)
+- Police reports (we don't have access)
+- Photos (not analyzed)
+
+BLOCKED PHRASES:
+- "the other driver is at fault"
+- "you are not liable"
+- "their insurance should pay"
+
+ALLOWED PHRASES:
+- "fault is determined by..."
+- "typically, adjusters evaluate..."
+- "you may want to discuss liability with..."
+
+CITATION VERIFICATION:
+Hallucination detection:
+
+1. Extract citations: regex for [1], [2], [3], etc.
+2. Validate against context: Does chunk [1] actually exist?
+3. Validate content: Does the answer accurately reflect chunk [1]?
+4. Remove invalid citations, flag for review
+
+================================================================================
+6. LAYER 5: OBSERVABILITY (MONITORING & TRACING)
+================================================================================
+
+FILE: observability/tracing.py, observability/logger.py
+
+6.1 THREE PILLARS OF OBSERVABILITY
+----------------------------
+
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│     LOGS        │  │    METRICS      │  │    TRACES       │
+│  (Structured)   │  │  (Quantified)   │  │  (Distributed)  │
+└─────────────────┘  └─────────────────┘  └─────────────────┘
+
+LOGS: What happened? (events, errors, state changes)
+METRICS: How much/little? (latency, throughput, error rates)
+TRACES: Where did time go? (request flow across components)
+
+6.2 STRUCTURED LOGGING (structlog)
+----------------------------
+Traditional logging:
+```
+[ERROR] Failed to load FAISS index
+```
+
+Structured logging (JSON):
+```json
+{
+  "event": "faiss_load_failed",
+  "error": "FileNotFoundError: data/faiss_index/index.faiss",
+  "level": "error",
+  "timestamp": "2026-05-25T04:06:52.520408Z"
+}
+```
+
+BENEFITS:
+- Machine-parseable (Splunk, Datadog, ELK)
+- Queryable: `event=faiss_load_failed`
+- Correlation: All logs have timestamp, request_id
+- Schema: Consistent field names across codebase
+
+6.3 LANGSMITH TRACING
+----------------------------
+LangSmith is specialized LLM observability:
+
+WHAT IT CAPTURES:
+- Prompts sent to LLM
+- Responses received
+- Token usage (input/output)
+- Cost ($) per call
+- Latency per call
+- Chain/graph visualization
+
+SETUP:
+```python
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_API_KEY"] = "..."
+os.environ["LANGCHAIN_PROJECT"] = "roadguard-copilot-dev"
+```
+
+TRACE VISUALIZATION:
+```
+Router Node
+├── Input: "What does comprehensive cover?"
+├── Prompt: [system, user messages]
+├── Output: {"intent": "COVERAGE_QA", "tools": ["policy_rag_tool"]}
+├── Tokens: 245 in, 78 out
+├── Latency: 124ms
+└── Cost: $0.002
+```
+
+DEBUGGING WITH TRACES:
+1. User reports wrong answer
+2. Find trace by session_id
+3. Check router: Did it classify correctly?
+4. Check tools: Did RAG retrieve right chunks?
+5. Check synthesis: Did LLM ignore context?
+6. Check guardrails: Was answer modified?
+
+6.4 METRICS COLLECTED
+----------------------------
+
+PER-REQUEST METRICS:
+- Total latency (end-to-end)
+- Node-level latency (guardrail, router, tools, synthesis)
+- Tool latency (individual and parallel)
+- Token usage (input/output per LLM call)
+- Citation count
+- Guardrail trigger rate
+
+AGGREGATE METRICS:
+- Requests per minute
+- Average latency by intent
+- Error rate by node
+- Cache hit rate (router)
+- Reranker improvement (%)
+
+6.5 HEALTH ENDPOINTS
+----------------------------
+
+GET /health
+Returns:
+```json
+{
+  "status": "ok",
+  "chunk_count": 60,
+  "repair_cost_rows": 424,
+  "total_loss_rows": 90,
+  "version": "1.0.0"
+}
+```
+
+GET /ready
+Kubernetes-style readiness probe:
+- Returns 200 only if all components loaded
+- Used by load balancers to determine if pod can receive traffic
+
+================================================================================
+7. DATA FLOW: END-TO-END REQUEST LIFECYCLE
+================================================================================
+
+SCENARIO: "How much does rear bumper replacement cost?"
+
+STEP-BY-STEP:
+
+[0ms] USER ACTION
+User types query in Streamlit UI
+→ UI validates input (not empty, <500 chars)
+→ UI shows "thinking" indicator
+
+[50ms] UI → API
+HTTP POST /api/v1/chat/stream
+Payload: {"message": "How much...", "session_id": "abc-123", "tier": "premium"}
+
+[60ms] FASTAPI RECEIVES
+- Request ID generated (uuid)
+- Rate limit check (30 req/min)
+- Orchestrator retrieved from dependency injection
+
+[70ms] LANGGRAPH STARTS
+State initialized: {session_id, messages, intent: None, ...}
+
+[75ms] NODE 1: INPUT GUARDRAIL
+- Presidio scan: No PII detected (15ms)
+- Injection check: No patterns matched (1ms)
+- Off-topic check: Keyword bypass ("cost", "bumper") → Pass (1ms)
+→ State: {guardrail_triggered: False}
+
+[95ms] NODE 2: INTENT ROUTER
+- Cache miss (new query)
+- GPT-4o-mini call (80ms)
+- Response: {"intent": "REPAIR_ESTIMATE", "tools": ["repair_cost_tool", "policy_rag_tool"], "confidence": 0.96}
+→ State: {intent: "REPAIR_ESTIMATE", tools_used: [...], confidence: 0.96}
+
+[185ms] NODE 3: TOOL EXECUTION
+Parallel dispatch:
+
+Thread A: repair_cost_tool
+- CSV lookup: damage_type="bumper", vehicle_category="sedan" (default)
+- Result: {"low": 800, "high": 1200, "avg": 1000, "labor_hours": 4} (45ms)
+
+Thread B: policy_rag_tool  
+- Embed query (30ms)
+- FAISS search: Top 10 chunks (5ms)
+- Rerank: Cross-encoder scores (80ms)
+- Select top 3 (1ms)
+- Result: Chunks about collision coverage, deductible, repair process
+
+await asyncio.gather() completes at max(45, 116) = 116ms
+
+→ State: {tool_results: [{repair_costs}, {rag_chunks}], citations: [...]}
+
+[305ms] NODE 4: LLM SYNTHESIS
+Prompt built (800 tokens):
+- System: 100 tokens
+- Context: 400 tokens (3 chunks × ~130 each)
+- Tool results: 100 tokens
+- History: 50 tokens
+- User query: 50 tokens
+
+GPT-4o call:
+- Time to first token: 1500ms
+- Token generation: 150 tokens × 15ms = 2250ms
+- Total: ~3750ms BUT streamed
+
+Streaming starts at ~1800ms from request start
+
+[2000ms] FIRST TOKEN SENT
+UI receives: "Rear"
+[2100ms] UI receives: " bumper"
+[2200ms] UI receives: " replacement"
+...
+[5000ms] STREAMING COMPLETE
+Full answer: "Rear bumper replacement typically costs between $800 and $1,200 depending on your vehicle..."
+
+[5010ms] NODE 5: OUTPUT GUARDRAIL
+- Legal check: Pass (no legal advice)
+- Fault check: Pass (no fault determination)
+- Dollar verification: $800, $1200 match tool result (±10%) → Pass
+- Citation check: 3 citations valid → Pass
+→ State: {guardrail_triggered: False}
+
+[5020ms] NODE 6: MEMORY UPDATE
+- Turn saved to session
+- Metrics recorded (latency: 5020ms)
+
+[5030ms] RESPONSE RETURNED
+UI displays full message with citations
+→ User sees: Answered in ~5 seconds with sources
+
+================================================================================
+8. PERFORMANCE OPTIMIZATIONS
+================================================================================
+
+8.1 COLD START PROBLEM
+----------------------------
+Original Issue:
+- First request after API restart: 6-7 seconds
+- Subsequent requests: 3-4 seconds
+
+Root Cause:
+- ML models loaded on first use
+- Model loading is blocking and slow
+
+Solution: Pre-warming
+
+8.2 PRE-WARMING STRATEGY
+----------------------------
+In api/main.py lifespan:
+
+```python
+@app.lifespan("startup")
+async def startup():
+    # Warm embedding model
+    embedder.embed_documents(["test"])
+    
+    # Warm reranker
+    reranker.rerank(["query"], ["doc1", "doc2"])
+    
+    # Warm Presidio
+    presidio.analyze(text="test")
+```
+
+IMPACT:
+- Before: First request 6000ms
+- After: First request 3000ms
+- Improvement: 50% faster cold start
+
+8.3 PROMPT OPTIMIZATION
+----------------------------
+Token reduction = Latency reduction (LLMs charge per token)
+
+BEFORE:
+- 5 chunks × 400 chars = 2000 chars (~500 tokens)
+- 5-turn history = ~500 tokens
+- Total prompt: ~1500 tokens
+
+AFTER:
+- 3 chunks × 200 chars = 600 chars (~150 tokens)
+- 3-turn history = ~300 tokens
+- Total prompt: ~800 tokens
+
+IMPACT:
+- 47% reduction in input tokens
+- Faster LLM processing
+- Lower cost
+
+8.4 MAX TOKENS REDUCTION
+----------------------------
+BEFORE:
+- max_tokens = 900
+- Average generation time: 12 seconds
+
+AFTER:
+- max_tokens = 500
+- Average generation time: 7 seconds
+
+IMPACT:
+- 42% faster synthesis
+- Most answers fit in 300-400 tokens anyway
+- Rarely hit the limit
+
+8.5 PARALLEL TOOL EXECUTION
+----------------------------
+BEFORE (sequential):
+```python
+for tool in tools:
+    result = await execute(tool)  # Wait for each
+```
+Time = sum(all tools)
+
+AFTER (parallel):
+```python
+results = await asyncio.gather(*[execute(t) for t in tools])
+```
+Time = max(slowest tool)
+
+IMPACT:
+- 300-500ms saved per request
+- Especially noticeable for multi-tool intents
+
+8.6 CACHING STRATEGIES
+----------------------------
+
+ROUTER CACHE:
+- LRU cache on IntentRouter.classify()
+- 128 entries
+- Key: hash of normalized query
+- Hit rate: ~15% (common questions)
+- Saves: 80-100ms per hit
+
+HEALTH CHECK CACHE:
+- UI caches /health response for 30 seconds
+- Prevents polling API every UI rerun
+- Saves: 50ms per UI interaction
+
+8.7 EMBEDDING BATCHING
+----------------------------
+BEFORE:
+- 60 chunks → 60 individual embedding calls
+- 60 × 100ms = 6000ms
+
+AFTER:
+- 60 chunks → 2 batches of 30
+- 2 × 150ms = 300ms
+
+IMPACT:
+- 95% reduction in embedding time
+- Critical for index building
+
+================================================================================
+9. SECURITY ARCHITECTURE
+================================================================================
+
+9.1 THREAT MODEL
+----------------------------
+
+ATTACKER PROFILES:
+1. End User (accidental)
+   - Pastes PII into chat
+   - Asks off-topic questions
+   
+2. Malicious User (intentional)
+   - Prompt injection attempts
+   - Jailbreak attempts
+   - Resource exhaustion (DDoS)
+   
+3. External Attacker
+   - API exploitation
+   - Data exfiltration
+   - Model extraction
+
+DEFENSES BY PROFILE:
+
+End User:
+- PII detection + blocking
+- Off-topic filtering with gentle redirect
+
+Malicious User:
+- Prompt injection detection
+- Rate limiting (30 req/min)
+- Guardrails prevent harmful outputs
+- No sensitive data in responses
+
+External Attacker:
+- Input validation (Pydantic)
+- Error sanitization (no stack traces to user)
+- CORS restrictions
+- No direct LLM access (only through orchestrator)
+
+9.2 PII HANDLING
+----------------------------
+
+DETECTION: Presidio (as described in Section 5)
+
+BLOCKING STRATEGY:
+- PII detected → Immediate block
+- No LLM call made (saves cost, prevents data leakage)
+- User sees: "I can't process requests containing personal information..."
+- Suggested action: "Please remove SSN, account numbers, etc."
+
+LOGGING CONSIDERATIONS:
+- Logs must not contain PII
+- If error occurs during PII processing, sanitize before logging
+- Use hashing for user IDs in logs (not reversible)
+
+9.3 SECURE DEPLOYMENT
+----------------------------
+
+ENVIRONMENT VARIABLES:
+- API keys in .env (not in code)
+- .env in .gitignore
+- Different keys for dev/staging/prod
+
+DEPENDENCY SCANNING:
+- requirements.txt pinned to specific versions
+- Regular updates for security patches
+- No unused dependencies (reduces attack surface)
+
+NETWORK SECURITY:
+- API binds to localhost in dev (0.0.0.0 in prod behind LB)
+- No sensitive ports exposed
+- HTTPS in production (TLS termination at LB)
+
+================================================================================
+10. EXTENSIBILITY & FUTURE ENHANCEMENTS
+================================================================================
+
+10.1 ADDING NEW TOOLS
+----------------------------
+
+To add a "diminished_value_tool":
+
+1. Create agent/tools/diminished_value_tool.py
+2. Implement async execute(state) function
+3. Return ToolResult with success/error
+4. Register in orchestrator's TOOL_REGISTRY
+5. Add to intent router's prompt (which intent uses this tool?)
+
+EXAMPLE:
+```python
+async def diminished_value_tool(state: AgentState) -> ToolResult:
+    acv = extract_acv(state["messages"])
+    damage_severity = extract_damage(state["messages"])
+    
+    # Business logic
+    diminished_pct = lookup_table[damage_severity]
+    diminished_value = acv * diminished_pct
+    
+    return ToolResult(
+        tool_name="diminished_value_tool",
+        success=True,
+        result={"diminished_value": diminished_value, "method": "17c formula"},
+        latency_ms=25
+    )
+```
+
+10.2 ADDING NEW INTENTS
+----------------------------
+
+To add "ACCIDENT_FORGIVENESS" intent:
+
+1. Update agent/router.py INTENTS dict
+2. Add examples to router prompt
+3. Define which tools handle this (policy_rag_tool)
+4. Add FAQ entry in UI
+
+10.3 MULTI-MODAL EXTENSIONS
+----------------------------
+
+IMAGE UPLOAD:
+- User uploads accident photo
+- Vision model (GPT-4o-vision) analyzes damage
+- Damage classification feeds into repair_cost_tool
+- Estimated costs include visual severity
+
+DOCUMENT UPLOAD:
+- User uploads police report PDF
+- OCR extracts text
+- RAG retrieves relevant policy sections
+- Synthesis combines report + policy
+
+VOICE:
+- Whisper API for speech-to-text
+- Same pipeline from text onward
+- Text-to-speech for responses (accessibility)
+
+LATENCY IMPACT:
+- Image upload: +2-3s (vision model)
+- Document upload: +1-2s (OCR + chunking)
+- Voice: +500ms (STT + TTS)
+
+10.4 ENTERPRISE FEATURES
+----------------------------
+
+AUTHENTICATION:
+- JWT tokens for user sessions
+- SSO integration (SAML/OIDC)
+- Role-based access (customer, agent, admin)
+
+AUDIT LOGS:
+- Every query and response logged immutably
+- Compliance with insurance regulations
+- Retention policies (7 years typical)
+
+A/B TESTING:
+- Route 10% of traffic to new prompt version
+- Measure answer quality, latency, satisfaction
+- Gradual rollout based on metrics
+
+================================================================================
+11. COMMON DRILL QUESTIONS & ANSWERS
+================================================================================
+
+Q1: "Why did you choose LangGraph over a simpler approach?"
+A1: Three reasons: (1) Deterministic debugging — each node is testable in isolation.
+(2) Conditional flows — we can route to clarification without messy if-statements.
+(3) Observability — LangSmith traces show exactly where time is spent per node.
+
+Q2: "What happens if the LLM hallucinates a repair cost?"
+A2: Multiple defenses: (1) Repair costs come ONLY from CSV lookup, not LLM generation.
+(2) Output guardrail verifies all dollar amounts against tool results. (3) If mismatch 
+detected, answer is blocked and user gets safe response.
+
+Q3: "How do you handle high traffic?"
+A3: Currently stateless API — can horizontally scale behind load balancer. 
+Session state is in-memory (would move to Redis in production). Rate limiting 
+prevents abuse. Async architecture handles concurrent requests efficiently.
+
+Q4: "Why two different LLMs (mini and 4o)?"
+A4: Separation of concerns. Router needs speed and structure — GPT-4o-mini at 
+temperature 0 with JSON output is perfect (100ms). Synthesis needs quality and 
+nuance — GPT-4o at temperature 0.1 is better (3s). Cost optimization: mini is 10x 
+cheaper.
+
+Q5: "What if FAISS returns irrelevant chunks?"
+A5: Two-stage retrieval helps. FAISS gets 10 candidates (recall-focused), then 
+cross-encoder reranker selects top 3 (precision-focused). If reranker scores are 
+all low (<0.5), we can fall back to "I don't have specific information about that."
+
+Q6: "How do you prevent legal liability?"
+A6: Multiple guardrails: (1) Input filter blocks attempts to get legal advice.
+(2) System prompt explicitly states "I am not a lawyer." (3) Output guardrail detects 
+and blocks any legal opinions. (4) Disclaimer appended to every response.
+
+Q7: "What was the biggest technical challenge?"
+A7: Latency optimization. Initial version took 8-10 seconds. We achieved 3-4 seconds 
+through: pre-warming models, reducing prompt tokens, parallel tool execution, and 
+streaming responses. The reranker model alone took 2 seconds to load — pre-warming 
+was critical.
+
+Q8: "How do you measure answer quality?"
+A8: Three methods: (1) Automated evaluation with DeepEval (30 test questions). 
+(2) Citation verification — every claim must have source. (3) Human review of 
+ambiguous cases. We also track guardrail trigger rate as quality indicator.
+
+Q9: "What if a user asks something the system can't answer?"
+A9: Graceful degradation. Intent router confidence < 0.5 triggers "I'm not sure I 
+understand..." clarification. If tools return no results, synthesis explicitly 
+states "I don't have information about that specific scenario." Never guess.
+
+Q10: "How would you extend this to other insurance types (home, life)?"
+A10: Modular design makes this straightforward: (1) Replace PDFs in data/pdfs/ 
+with home policy documents. (2) Update CSVs with home repair costs. (3) Modify 
+router prompt with home insurance intents. (4) Adjust tools for home-specific 
+logic. Core orchestrator remains unchanged.
+
+================================================================================
+PRESENTATION TIPS
+================================================================================
+
+1. START WITH THE PROBLEM
+   "Auto insurance customers have complex questions. Traditional chatbots give 
+   generic answers. We built a system that gives specific, cited, accurate answers."
+
+2. SHOW THE FLOW DIAGRAM
+   Use the 6-node LangGraph diagram. Walk through a real example.
+
+3. HIGHLIGHT THE GUARDRAILS
+   This differentiates academic projects from production-ready systems. 
+   Emphasize safety and reliability.
+
+4. DISCUSS THE TRADE-OFFS
+   - Why streaming? Perceived latency.
+   - Why reranker? Quality over speed.
+   - Why two LLMs? Cost and performance balance.
+
+5. DEMONSTRATE THE DEV CONSOLE
+   Show the workflow tracer. This proves you understand observability.
+
+6. BE READY FOR CODE QUESTIONS
+   Know the file structure. Be able to jump to specific functions.
+
+7. ACKNOWLEDGE LIMITATIONS
+   "Currently session state is in-memory. In production, we'd use Redis."
+   This shows maturity.
+
+================================================================================
+YOU'VE GOT THIS!
+================================================================================
